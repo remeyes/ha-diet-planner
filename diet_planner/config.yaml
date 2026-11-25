@@ -1,5 +1,5 @@
 name: Diet Planner
-version: "1.10.0"
+version: "1.11.0"
 slug: diet_planner
 url: https://github.com/remeyes/ha-diet-planner
 description: Jadłospis na tydzień, lista zakupów i profile żywieniowe dla domowników
@@ -19,11 +19,13 @@ options:
   api_key: ""
   google_api_key: ""
   xai_api_key: ""
+  openai_api_key: ""
   model: claude-opus-5-5
   import_model: claude-haiku-5-5
 schema:
   api_key: password?
   google_api_key: password?
   xai_api_key: password?
+  openai_api_key: password?
   model: str
   import_model: str

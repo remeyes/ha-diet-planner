@@ -1,5 +1,9 @@
 # Zmiany
 
+## 1.11.0
+- Czwarty dostawca AI: OpenAI (GPT) – klucz `openai_api_key`, modele np. `openai:gpt-6.2-sol`.
+- Wyczerpany limit wydatków u dostawcy od razu przełącza na model zapasowy.
+
 ## 1.10.0
 - Modele AI od trzech dostawców: Anthropic (Claude), Google (Gemini) i xAI (Grok).
 - Wybór modelu i modelu zapasowego osobno dla każdej funkcji (Ustawienia → AI), przycisk „Test”.

@@ -17,15 +17,15 @@ Logowanie i dostęp z zewnątrz zapewnia Home Assistant (Ingress). Jeśli łącz
 4. W zakładce **Konfiguracja** wpisz klucz Claude API w `api_key` (opcjonalnie – bez niego działa wszystko poza AI).
 5. Włącz **Pokaż na pasku bocznym** i kliknij **Uruchom**. W menu HA pojawi się pozycja **Dieta**.
 
-## Modele AI (Anthropic, Google, xAI)
+## Modele AI (Anthropic, Google, xAI, OpenAI)
 
-Funkcje AI mogą korzystać z modeli trzech dostawców: **Anthropic (Claude)**, **Google (Gemini)** i **xAI (Grok)**.
+Funkcje AI mogą korzystać z modeli czterech dostawców: **Anthropic (Claude)**, **Google (Gemini)**, **xAI (Grok)** i **OpenAI (GPT)**.
 
-1. Załóż klucz u wybranych dostawców (wystarczy jeden): console.anthropic.com, aistudio.google.com, console.x.ai.
-2. W HA otwórz **Aplikacje → Diet Planner → Konfiguracja** i wpisz klucze w polach `api_key` (Anthropic), `google_api_key`, `xai_api_key`. Zapisz i uruchom dodatek ponownie.
+1. Załóż klucz u wybranych dostawców (wystarczy jeden): console.anthropic.com, aistudio.google.com, console.x.ai, platform.openai.com.
+2. W HA otwórz **Aplikacje → Diet Planner → Konfiguracja** i wpisz klucze w polach `api_key` (Anthropic), `google_api_key`, `xai_api_key`, `openai_api_key`. Zapisz i uruchom dodatek ponownie.
 3. W aplikacji: **Ustawienia → AI → Modele AI** wybierz model dla każdej funkcji (agent diety, przepis z tekstu, import książek, instrukcje i meal prep, szybki zamiennik, zdjęcie lodówki, błonnik) i opcjonalnie **model zapasowy**. Przycisk **Test** sprawdza, czy model odpowiada.
 
-Model zapisujesz jako `dostawca:model`, np. `anthropic:claude-opus-5-5`, `google:gemini-3.8-flash`, `xai:grok-4.7`. Gdy główny dostawca nie odpowiada albo brakuje klucza, aplikacja sama użyje modelu zapasowego. Kalorie, porcje i alergie zawsze liczy i pilnuje kod aplikacji – niezależnie od modelu.
+Model zapisujesz jako `dostawca:model`, np. `anthropic:claude-opus-5-5`, `google:gemini-3.8-flash`, `xai:grok-4.7`, `openai:gpt-6.2-sol`. Gdy główny dostawca nie odpowiada albo brakuje klucza, aplikacja sama użyje modelu zapasowego. Kalorie, porcje i alergie zawsze liczy i pilnuje kod aplikacji – niezależnie od modelu.
 
 Klucze zostają na serwerze i nie trafiają do przeglądarki. Zdjęcia lodówki są przed wysłaniem zmniejszane i trafiają do wybranego dostawcy.
 

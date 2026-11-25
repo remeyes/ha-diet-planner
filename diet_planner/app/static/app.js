@@ -1002,7 +1002,7 @@ function aiCard() {
   const res = S.aiTest || {};
   return `<div class="card"><h2>Modele AI <small>${a.available ? "aktywne" : "wyłączone"}</small></h2>
     <div class="provs">${Object.entries(prov).map(([p, v]) => `<span class="chip ${v.ready ? "pc p0" : ""}" title="${esc(v.reason || "gotowy")}">${v.ready ? "✓" : "✕"} ${esc(v.label)}</span>`).join("")}</div>
-    <p class="sub">Klucze API wpisujesz w <b>Konfiguracji dodatku</b> w HA (<code>anthropic_api_key</code>, <code>google_api_key</code>, <code>xai_api_key</code>), lokalnie w pliku <code>.env</code>. Nie są wysyłane do przeglądarki.</p>
+    <p class="sub">Klucze API wpisujesz w <b>Konfiguracji dodatku</b> w HA (<code>api_key</code> dla Anthropic, <code>google_api_key</code>, <code>xai_api_key</code>, <code>openai_api_key</code>), lokalnie w pliku <code>.env</code>. Nie są wysyłane do przeglądarki.</p>
     <datalist id="ai-models">${cat.map(m => `<option value="${esc(m.id)}">${esc(m.label)} · ${price(m.id)} za 1M tokenów${m.vision ? "" : " · bez zdjęć"}${readyP(m.id.split(":")[0]) ? "" : " · brak klucza"}</option>`).join("")}</datalist>
     <div class="aitasks">${Object.entries(S.aiEdit).map(([t, v]) => { const st = tasks[t] || {}, r = res[t];
       const warn = !readyP((v.model || "").split(":")[0]) ? (v.fallback && readyP(v.fallback.split(":")[0]) ? "główny bez klucza – zadziała zapasowy" : "brak klucza dla tego dostawcy") : "";

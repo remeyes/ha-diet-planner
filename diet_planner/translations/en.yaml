@@ -5,6 +5,8 @@ configuration:
     name: Google API key (Gemini)
   xai_api_key:
     name: xAI API key (Grok)
+  openai_api_key:
+    name: OpenAI API key (GPT)
   model:
     name: Default model (stronger)
   import_model:

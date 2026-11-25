@@ -1,11 +1,12 @@
-"""Wspólny klient LLM dla agentów aplikacji: Anthropic (Claude), Google (Gemini) i xAI (Grok).
+"""Wspólny klient LLM dla agentów aplikacji: Anthropic (Claude), Google (Gemini), xAI (Grok) i OpenAI (GPT).
 
 Każda funkcja aplikacji (zadanie, np. „agent diety”) ma przypisany model główny i opcjonalnie zapasowy
 (library/ai_models.json, edycja w Ustawieniach). Model zapisujemy jako „dostawca:nazwa”, np.
 „google:gemini-3.8-flash”. Gdy główny dostawca nie odpowiada albo nie ma klucza – zapytanie idzie do zapasowego.
 
-Klucze: opcje dodatku HA (/data/options.json: anthropic_api_key / api_key, google_api_key, xai_api_key)
-albo zmienne środowiskowe (lokalnie plik .env: ANTHROPIC_API_KEY, GOOGLE_API_KEY / GEMINI_API_KEY, XAI_API_KEY).
+Klucze: opcje dodatku HA (/data/options.json: anthropic_api_key / api_key, google_api_key, xai_api_key,
+openai_api_key) albo zmienne środowiskowe (lokalnie plik .env: ANTHROPIC_API_KEY, GOOGLE_API_KEY / GEMINI_API_KEY,
+XAI_API_KEY, OPENAI_API_KEY).
 Klucze nie trafiają do przeglądarki ani do plików danych.
 
 Odpowiedź zawsze jest JSON-em zgodnym ze schematem; i tak sprawdza ją kod aplikacji (kalorie, alergie itd.).
@@ -24,8 +25,10 @@ import storage
 OPTIONS_FILE = Path("/data/options.json")  # opcje dodatku Home Assistant
 DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_IMPORT_MODEL = "claude-haiku-5-5"
-PROVIDERS = {"anthropic": "Anthropic (Claude)", "google": "Google (Gemini)", "xai": "xAI (Grok)"}
+PROVIDERS = {"anthropic": "Anthropic (Claude)", "google": "Google (Gemini)", "xai": "xAI (Grok)",
+             "openai": "OpenAI (GPT)"}
 XAI_URL = "https://api.x.ai/v1/responses"
+OPENAI_URL = "https://api.openai.com/v1/responses"
 
 # Modele podpowiadane w Ustawieniach: (nazwa, cena $/1M wejście, cena $/1M wyjście, obsługuje zdjęcia).
 # Ceny wg cenników dostawców z 25.11.2026 (Gemini 4 Carbon – cena od 1.12.2026). Można wpisać też inny model.
@@ -42,6 +45,10 @@ MODELS = {
     "xai:grok-4.7": ("Grok 4.7", 2.0, 6.0, True),
     "xai:grok-4.6": ("Grok 4.6", 2.0, 6.0, True),
     "xai:grok-4.3": ("Grok 4.3", 1.25, 2.50, False),
+    "openai:gpt-6.2-astra": ("GPT-6.2 Astra", 8.0, 40.0, True),
+    "openai:gpt-6.2-sol": ("GPT-6.2 Sol", 2.0, 10.0, True),
+    "openai:gpt-6.1-terra": ("GPT-6.1 Terra", 1.0, 5.0, True),
+    "openai:gpt-6-luna": ("GPT-6 Luna", 0.10, 0.50, True),
 }
 # Starsze nazwy z cennikiem (zgodność ze statystykami i dawnymi ustawieniami).
 EXTRA_PRICES = {"anthropic:claude-opus-5": (5.0, 25.0), "anthropic:claude-sonnet-5": (2.0, 10.0),
@@ -96,11 +103,12 @@ def keys():
         "anthropic": (o.get("anthropic_api_key") or o.get("api_key") or env("ANTHROPIC_API_KEY") or "").strip(),
         "google": (o.get("google_api_key") or env("GOOGLE_API_KEY") or env("GEMINI_API_KEY") or "").strip(),
         "xai": (o.get("xai_api_key") or env("XAI_API_KEY") or "").strip(),
+        "openai": (o.get("openai_api_key") or env("OPENAI_API_KEY") or "").strip(),
     }
 
 
 def _sdk(provider):
-    mod = {"anthropic": "anthropic", "google": "google.genai", "xai": "httpx"}[provider]
+    mod = {"anthropic": "anthropic", "google": "google.genai", "xai": "httpx", "openai": "httpx"}[provider]
     try:
         return importlib.util.find_spec(mod) is not None
     except (ImportError, ValueError):
@@ -128,7 +136,8 @@ def normalize(model):
     if ":" in m and m.split(":", 1)[0] in PROVIDERS:
         return m
     low = m.lower()
-    p = "google" if low.startswith("gemini") else "xai" if low.startswith("grok") else "anthropic"
+    p = ("google" if low.startswith("gemini") else "xai" if low.startswith("grok")
+         else "openai" if low.startswith(("gpt", "o3", "o4")) else "anthropic")
     return f"{p}:{m}"
 
 
@@ -215,7 +224,7 @@ def ai_status(task=None):
         return {"available": False, "reason": f"{label(t['model'])}: {why} – dodaj klucz w opcjach dodatku HA "
                                               "(lokalnie: plik .env) albo zmień model w Ustawieniach."}
     any_ready = any(t["ready"] for t in tasks.values())
-    reason = "" if any_ready else ("Brak klucza API – dodaj klucz Anthropic, Google albo xAI w opcjach dodatku HA "
+    reason = "" if any_ready else ("Brak klucza API – dodaj klucz Anthropic, Google, xAI albo OpenAI w opcjach dodatku HA "
                                    "(lokalnie: plik .env).")
     return {"available": any_ready, "reason": reason, "providers": prov, "tasks": tasks,
             "model": tasks["diet"]["label"], "import_model": tasks["book_import"]["label"]}
@@ -386,9 +395,26 @@ def _call_google(name, key, content, schema, system, effort, max_tokens):
     return resp.text or "{}", tin, tout
 
 
+RESPONSES_API = {  # dostawcy z tym samym REST Responses API: (adres, nazwa, modele z reasoning.effort)
+    "xai": (XAI_URL, "xAI", lambda n: n in XAI_REASONING),
+    "openai": (OPENAI_URL, "OpenAI", lambda n: n.startswith(("gpt-5", "gpt-6", "o3", "o4"))),
+}
+# 429 z wyczerpanym budżetem/kredytami – ponawianie nic nie da, od razu model zapasowy.
+_NO_CREDIT = ("credit_balance_exhausted", "spend_limit", "usage_limit", "insufficient_quota")
+
+
 def _call_xai(name, key, content, schema, system, effort, max_tokens):
-    """xAI przez udokumentowane REST Responses API (structured outputs: text.format = json_schema)."""
+    return _call_responses("xai", name, key, content, schema, system, effort, max_tokens)
+
+
+def _call_openai(name, key, content, schema, system, effort, max_tokens):
+    return _call_responses("openai", name, key, content, schema, system, effort, max_tokens)
+
+
+def _call_responses(provider, name, key, content, schema, system, effort, max_tokens):
+    """xAI i OpenAI przez udokumentowane REST Responses API (structured outputs: text.format = json_schema)."""
     import httpx
+    url, who, reasoning = RESPONSES_API[provider]
     parts = []
     for b in content:
         if b.get("type") == "text":
@@ -399,24 +425,28 @@ def _call_xai(name, key, content, schema, system, effort, max_tokens):
     msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": parts}]
     body = {"model": name, "input": msgs, "max_output_tokens": max_tokens,
             "text": {"format": {"type": "json_schema", "name": "odpowiedz", "schema": schema, "strict": True}}}
-    if name in XAI_REASONING:
+    if provider == "openai":
+        body["store"] = False  # nie przechowujemy odpowiedzi po stronie OpenAI
+    if reasoning(name):
         body["reasoning"] = {"effort": effort if effort in ("low", "medium", "high") else "low"}
     try:
-        r = httpx.post(XAI_URL, json=body, headers={"Authorization": f"Bearer {key}"}, timeout=600)
+        r = httpx.post(url, json=body, headers={"Authorization": f"Bearer {key}"}, timeout=600)
     except Exception as e:  # noqa: BLE001
         if _transient_net(e):
-            raise TransientError(f"Brak połączenia z xAI ({_short(e)}).")
+            raise TransientError(f"Brak połączenia z {who} ({_short(e)}).")
         raise
     if r.status_code in (401, 403):
-        raise KeyProblem(f"Nieprawidłowy klucz xAI albo brak dostępu ({r.status_code}).")
+        raise KeyProblem(f"Nieprawidłowy klucz {who} albo brak dostępu ({r.status_code}).")
+    if r.status_code == 429 and any(w in r.text for w in _NO_CREDIT):
+        raise KeyProblem(f"{who}: wyczerpany limit wydatków albo kredyty.")
     if r.status_code == 429 or r.status_code >= 500:
-        raise TransientError(f"xAI chwilowo nie odpowiada ({r.status_code}).")
+        raise TransientError(f"{who} chwilowo nie odpowiada ({r.status_code}).")
     if r.status_code >= 400:
         try:
             msg = r.json().get("error") or r.text
         except ValueError:
             msg = r.text
-        raise ValueError(f"Błędne zapytanie do API xAI ({r.status_code}): {str(msg)[:300]}")
+        raise ValueError(f"Błędne zapytanie do API {who} ({r.status_code}): {str(msg)[:300]}")
     j = r.json()
     u = j.get("usage") or {}
     tin, tout = int(u.get("input_tokens") or 0), int(u.get("output_tokens") or 0)
@@ -424,7 +454,7 @@ def _call_xai(name, key, content, schema, system, effort, max_tokens):
         reason = (j.get("incomplete_details") or {}).get("reason", "")
         if "token" in reason:
             raise TruncatedError("Odpowiedź modelu była za długa – spróbuj ponownie.", tin, tout)
-        raise ValueError(f"xAI nie dokończył odpowiedzi ({reason or 'incomplete'}).")
+        raise ValueError(f"{who} nie dokończył odpowiedzi ({reason or 'incomplete'}).")
     texts = [c.get("text", "") for item in j.get("output") or [] if item.get("type") == "message"
              for c in item.get("content") or [] if c.get("type") == "output_text"]
     if not texts and j.get("output_text"):
@@ -432,11 +462,11 @@ def _call_xai(name, key, content, schema, system, effort, max_tokens):
     if not texts:
         refusal = [c.get("refusal") for item in j.get("output") or [] for c in item.get("content") or []
                    if c.get("type") == "refusal"]
-        raise ValueError("Model odmówił przetworzenia tego zapytania." if refusal else "Pusta odpowiedź xAI.")
+        raise ValueError("Model odmówił przetworzenia tego zapytania." if refusal else f"Pusta odpowiedź {who}.")
     return "".join(texts), tin, tout
 
 
-_CALLS = {"anthropic": _call_anthropic, "google": _call_google, "xai": _call_xai}
+_CALLS = {"anthropic": _call_anthropic, "google": _call_google, "xai": _call_xai, "openai": _call_openai}
 
 
 def _ask_one(model, content, schema, system, effort, max_tokens, purpose):

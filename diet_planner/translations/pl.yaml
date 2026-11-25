@@ -8,6 +8,9 @@ configuration:
   xai_api_key:
     name: Klucz API xAI (Grok)
     description: Z console.x.ai. Puste = bez modeli Grok.
+  openai_api_key:
+    name: Klucz API OpenAI (GPT)
+    description: Z platform.openai.com. Puste = bez modeli GPT.
   model:
     name: Domyślny model (dokładniejszy)
     description: Używany, dopóki nie przypiszesz modeli do funkcji w aplikacji (Ustawienia → AI).
