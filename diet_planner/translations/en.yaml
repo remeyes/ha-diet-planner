@@ -1,0 +1,11 @@
+configuration:
+  api_key:
+    name: Anthropic API key (Claude)
+  google_api_key:
+    name: Google API key (Gemini)
+  xai_api_key:
+    name: xAI API key (Grok)
+  model:
+    name: Default model (stronger)
+  import_model:
+    name: Default model (cheaper)

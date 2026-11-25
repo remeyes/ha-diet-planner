@@ -179,7 +179,7 @@ def rewrite_instructions(recipes, model=None):
     Zmienia wyłącznie instrukcje – składniki, nazwy i kalorie zostają nietknięte."""
     by_id = {r["id"]: r for r in recipes}
     out = ai.ask_json([{"type": "text", "text": rewrite_prompt(recipes)}], _rewrite_schema(),
-                      purpose="instrukcje przepisów", model=model, effort="low", max_tokens=64000,
+                      purpose="instrukcje przepisów", task="recipe_enrich", model=model, effort="low", max_tokens=64000,
                       system=REWRITE_SYSTEM)
     result = {}
     for item in out.get("recipes", []):
@@ -215,7 +215,7 @@ def classify_serving(recipes, model=None):
     schema = {"type": "object", "additionalProperties": False, "required": ["recipes"],
               "properties": {"recipes": {"type": "array", "items": item}}}
     out = ai.ask_json([{"type": "text", "text": rewrite_prompt(recipes)}], schema, purpose="porcjowanie i meal prep",
-                      model=model, effort="low", max_tokens=64000, system=CLASSIFY_SYSTEM)
+                      task="recipe_enrich", model=model, effort="low", max_tokens=64000, system=CLASSIFY_SYSTEM)
     result = {}
     for it in out.get("recipes", []):
         r = by_id.get(it.get("id"))
@@ -356,23 +356,23 @@ def split_text(text, overlap=SPLIT_OVERLAP):
     return text[:cut].strip(), text[max(0, cut - overlap):].strip()
 
 
-def _extract(text, prods, model, depth=0):
+def _extract(text, prods, model, depth=0, task="recipe_text"):
     """Surowe przepisy z modelu. Gdy odpowiedź nie mieści się w limicie tokenów
     (dużo przepisów w jednym fragmencie), dzieli tekst na połówki i przetwarza osobno."""
     content = (f"Baza produktów (dokładne nazwy): {', '.join(sorted(prods))}\n\n"
                f"Tekst do przetworzenia:\n<tekst>\n{text}\n</tekst>")
     try:
         out = ai.ask_json([{"type": "text", "text": content}], _schema(), purpose="agent przepisów",
-                          model=model, effort="low", max_tokens=64000, system=SYSTEM)
+                          task=task, model=model, effort="low", max_tokens=64000, system=SYSTEM)
     except ai.TruncatedError:
         if depth >= MAX_SPLIT_DEPTH or len(text) < 2 * SPLIT_OVERLAP:
             raise
         a, b = split_text(text)
-        return _extract(a, prods, model, depth + 1) + _extract(b, prods, model, depth + 1)
+        return _extract(a, prods, model, depth + 1, task) + _extract(b, prods, model, depth + 1, task)
     return out.get("recipes", [])
 
 
-def from_text(text, source=None, model=None):
+def from_text(text, source=None, model=None, task="recipe_text"):
     """Wywołuje model i zwraca listę szkiców (bez duplikatów z biblioteką i kolejką)."""
     text = (text or "").strip()
     if len(text) < 40:
@@ -380,7 +380,7 @@ def from_text(text, source=None, model=None):
     prods = nutrition.products_map()
     seen = known_names()
     drafts = []
-    for raw in _extract(text[:60000], prods, model):
+    for raw in _extract(text[:60000], prods, model, task=task):
         d = build_draft(raw, source, prods)
         key = norm_name(d["recipe"]["name"])
         if not key or key in seen:

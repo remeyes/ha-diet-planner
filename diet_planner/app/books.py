@@ -310,15 +310,15 @@ def prepare(name):
 
 def estimate(name):
     path, title, chunks, size = prepare(name)
-    model = ai.config()["import_model"]
+    model = ai.resolve("book_import")[0]
     chars = sum(len(t) for _, t in chunks)
     prods = len(storage.products())
     tin = chars / 3.2 + len(chunks) * (1500 + prods * 6)
     tout = chars / 3.2 * 0.35 + len(chunks) * 300
-    p_in, p_out = ai.price(model)
-    est = {"chunks": len(chunks), "chars": chars, "model": model,
+    pr = ai.price(model)
+    est = {"chunks": len(chunks), "chars": chars, "model": ai.label(model),
            "tokens_in": round(tin), "tokens_out": round(tout),
-           "usd": round(tin / 1e6 * p_in + tout / 1e6 * p_out, 3)}
+           "usd": round(tin / 1e6 * pr[0] + tout / 1e6 * pr[1], 3) if pr else None}
     prev = _state().get(path.name, {})
     keep = prev.get("hash") == _hash(path) and prev.get("chunks_total") == len(chunks)
     _update(path.name, title=title, size=size, hash=_hash(path), estimate=est, chunks_total=len(chunks),
@@ -332,8 +332,9 @@ def start_import(name):
     with _lock:
         if _job["thread"] and _job["thread"].is_alive():
             raise BookError(f"Trwa już import książki „{_job['book']}”. Poczekaj albo go zatrzymaj.")
-        if not ai.ai_status()["available"]:
-            raise BookError(ai.ai_status()["reason"])
+        st = ai.ai_status("book_import")
+        if not st["available"]:
+            raise BookError(st["reason"])
         path, title, chunks, size = prepare(name)
         st = _state().get(path.name, {})
         if st.get("hash") != _hash(path) or st.get("chunks_total") != len(chunks):
@@ -351,7 +352,7 @@ def cancel():
 
 
 def _run(name, title, chunks, start):
-    model = ai.config()["import_model"]
+    model = None  # model z ustawień zadania „Import książek” (z zapasowym)
     errors = list(_state().get(name, {}).get("errors", []))
     try:
         for i in range(start, len(chunks)):
@@ -360,7 +361,7 @@ def _run(name, title, chunks, start):
                 return
             chapter, text = chunks[i]
             try:
-                drafts = recipe_agent.from_text(text, {"book": title, "file": name, "chapter": chapter}, model=model)
+                drafts = recipe_agent.from_text(text, {"book": title, "file": name, "chapter": chapter}, model=model, task="book_import")
                 if drafts:
                     recipe_agent.add_to_inbox(drafts)
                 st = _state().get(name, {})

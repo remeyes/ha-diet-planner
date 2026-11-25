@@ -76,8 +76,8 @@ def suggest(plan, slot, owned, limit=6):
 
 # --- Claude API --------------------------------------------------------------------
 
-def _ask_json(content, schema, max_tokens=4000):
-    return ai.ask_json(content, schema, purpose="szybki zamiennik", max_tokens=max_tokens)
+def _ask_json(content, schema, max_tokens=4000, task="quick_invent"):
+    return ai.ask_json(content, schema, purpose="szybki zamiennik", task=task, max_tokens=max_tokens)
 
 
 def recognize(image_data_url, text, products):
@@ -101,7 +101,7 @@ def recognize(image_data_url, text, products):
               "properties": {"known": {"type": "array", "items": {"type": "string"}},
                              "other": {"type": "array", "items": {"type": "string"}}}}
     out = _ask_json([{"type": "image", "source": {"type": "base64", "media_type": m.group(1), "data": data}},
-                     {"type": "text", "text": prompt}], schema)
+                     {"type": "text", "text": prompt}], schema, task="quick_photo")
     known = [k for k in out.get("known", []) if k in names]
     return known, [o for o in out.get("other", []) if o.strip()]
 

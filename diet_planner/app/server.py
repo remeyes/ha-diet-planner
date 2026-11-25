@@ -42,6 +42,15 @@ def slugify(text):
     return SLUG_RE.sub("_", t).strip("_")[:40] or "przepis"
 
 
+def ai_info():
+    """Stan AI dla interfejsu: dostawcy, przypisania zadań, katalog modeli, zużycie (bez kluczy)."""
+    return {**ai.ai_status(), "usage": ai.usage(),
+            "task_names": {t: v[0] for t, v in ai.TASKS.items()},
+            "task_vision": [t for t, v in ai.TASKS.items() if v[2]],
+            "catalog": [{"id": k, "label": v[0], "price_in": v[1], "price_out": v[2], "vision": v[3]}
+                        for k, v in ai.MODELS.items()]}
+
+
 def state():
     profiles = {}
     for pid, p in storage.profile_files().items():
@@ -57,7 +66,7 @@ def state():
         "current_week": planner.current_week(),
         "prep_mode_default": planner.prep_mode_default(planner.settings()),
         "exclusions": planner.exclusions(ppl),
-        "ai": {**ai.ai_status(), "usage": ai.usage()},
+        "ai": ai_info(),
         "inbox_count": len(recipe_agent.inbox()),
     }
 
@@ -119,6 +128,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, state())
             if p == "/api/inbox":
                 return self._send(200, {"items": recipe_agent.inbox()})
+            if p == "/api/ai":
+                return self._send(200, ai_info())
             if p == "/api/instructions":
                 return self._send(200, instructions_job.status())
             if p == "/api/books":
@@ -171,6 +182,11 @@ class Handler(BaseHTTPRequestHandler):
             m = re.match(r"^/api/books/(estimate|import|cancel|delete)$", p)
             if m:
                 return self._send(200, self._books(m.group(1), body))
+            if p == "/api/ai/test":  # krótkie zapytanie do modelu (poza blokadą zapisu)
+                return self._send(200, ai.test_model(body.get("model") or ""))
+            if p == "/api/ai/models":
+                ai.save_assignments(body.get("tasks") or {})
+                return self._send(200, ai_info())
             if p == "/api/products/fiber":
                 n = nutrition.fill_fiber()
                 return self._send(200, {"filled": n, "products": storage.products(), "recipes": storage.recipes()})

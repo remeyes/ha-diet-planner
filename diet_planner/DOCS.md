@@ -17,21 +17,21 @@ Logowanie i dostęp z zewnątrz zapewnia Home Assistant (Ingress). Jeśli łącz
 4. W zakładce **Konfiguracja** wpisz klucz Claude API w `api_key` (opcjonalnie – bez niego działa wszystko poza AI).
 5. Włącz **Pokaż na pasku bocznym** i kliknij **Uruchom**. W menu HA pojawi się pozycja **Dieta**.
 
-## Szybki zamiennik (AI)
+## Modele AI (Anthropic, Google, xAI)
 
-W karcie posiłku przycisk **⚡ Szybki zamiennik** podpowiada dania z bazy na podstawie tego, co masz w domu. Wpisujesz produkty tekstem, a to działa bez AI.
+Funkcje AI mogą korzystać z modeli trzech dostawców: **Anthropic (Claude)**, **Google (Gemini)** i **xAI (Grok)**.
 
-Zdjęcie lodówki i proponowanie nowych dań wymagają klucza Claude API:
-1. Załóż klucz na console.anthropic.com.
-2. W HA otwórz **Dodatki → Diet Planner → Konfiguracja** i wpisz go w polu `api_key`.
-3. Pole `model` to model Claude. Domyślnie jest `claude-opus-5-5`. Jeśli chcesz taniej, wpisz `claude-haiku-5-5`.
-4. Zapisz i zrestartuj dodatek.
+1. Załóż klucz u wybranych dostawców (wystarczy jeden): console.anthropic.com, aistudio.google.com, console.x.ai.
+2. W HA otwórz **Aplikacje → Diet Planner → Konfiguracja** i wpisz klucze w polach `api_key` (Anthropic), `google_api_key`, `xai_api_key`. Zapisz i uruchom dodatek ponownie.
+3. W aplikacji: **Ustawienia → AI → Modele AI** wybierz model dla każdej funkcji (agent diety, przepis z tekstu, import książek, instrukcje i meal prep, szybki zamiennik, zdjęcie lodówki, błonnik) i opcjonalnie **model zapasowy**. Przycisk **Test** sprawdza, czy model odpowiada.
 
-Zdjęcia są przed wysłaniem zmniejszane i trafiają do Anthropic. Klucz zostaje na serwerze i nie trafia do przeglądarki.
+Model zapisujesz jako `dostawca:model`, np. `anthropic:claude-opus-5-5`, `google:gemini-3.8-flash`, `xai:grok-4.7`. Gdy główny dostawca nie odpowiada albo brakuje klucza, aplikacja sama użyje modelu zapasowego. Kalorie, porcje i alergie zawsze liczy i pilnuje kod aplikacji – niezależnie od modelu.
+
+Klucze zostają na serwerze i nie trafiają do przeglądarki. Zdjęcia lodówki są przed wysłaniem zmniejszane i trafiają do wybranego dostawcy.
 
 ## Agenci AI
 
-Oba agenty korzystają z tego samego klucza `api_key`.
+Model dla każdego agenta wybierasz w **Ustawienia → AI** (patrz wyżej).
 
 - **Agent diety:** przycisk **Ułóż plan → Ułóż z agentem**. Dobiera dania z biblioteki pod Wasze preferencje, oceny 👍/👎, historię, sezon i życzenia wpisane w okienku. Alergie i produkty z „Nie lubi” pilnuje kod aplikacji, a porcje, kalorie i zakupy też liczy aplikacja. Uzasadnienie wyboru zobaczysz w karcie „Dlaczego taki plan”.
 - **Agent przepisów:** **Przepisy → ✨ Z tekstu** albo import książki. Rozpoznaje składniki, przelicza je na gramy na porcję i dopasowuje do bazy produktów. Brakujące produkty dodaje z szacowanymi wartościami, oznaczonymi jako „szacunek”. Szkice trafiają do zakładki **Do przejrzenia**, gdzie je zatwierdzasz.
@@ -91,7 +91,7 @@ Składniki i kalorie się nie zmieniają. Kopia sprzed zmiany trafia do `library
 
 Ważne informacje:
 - **Treść książki** trafia we fragmentach do Claude API.
-- **Model importu** ustawiasz w polu `import_model`, domyślnie tani `claude-haiku-5-5`.
+- **Model importu** wybierasz w **Ustawienia → AI** (funkcja „Import książek kucharskich”), domyślnie tani `claude-haiku-5-5`.
 - **Pliki z DRM** (np. Kindle, Legimi) i **skany bez warstwy tekstu** nie dadzą się odczytać.
 - **Biblioteka przepisów jest prywatna** i służy tylko Tobie.
 

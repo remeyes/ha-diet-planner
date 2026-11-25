@@ -177,14 +177,13 @@ def generate(week, wishes="", seed=None, prep_mode=None, prep_limit=None):
     base = planner.generate(week, seed=seed, prep_mode=prep_mode, prep_limit=limit)  # zapasowe menu z kodu
     fallback = [[m["recipe"] for m in d["meals"]] for d in base["days"]]
 
-    model = ai.config()["model"]
     prompt = build_prompt(week, wishes or "", ppl, st, slots, cands, hist, prods, prep, batches,
                           weekly=prep_mode == "weekly", prep_limit=limit)
     answer = ai.ask_json([{"type": "text", "text": prompt}], _schema(len(slots)), purpose="agent diety",
-                         model=model, effort="medium", max_tokens=16000, system=SYSTEM)
+                         task="diet", effort="medium", max_tokens=16000, system=SYSTEM)
     menu, fixed, notes = merge_menu(answer, slots, cands, fallback, batches, prep)
     plan = planner.generate(week, menu=menu, prep_mode=prep_mode, prep_limit=limit)  # kod pilnuje limitu
-    plan["agent"] = {"model": model, "summary": (answer.get("summary") or "").strip(),
+    plan["agent"] = {"model": ai.used_model(), "summary": (answer.get("summary") or "").strip(),
                      "notes": {str(k): v for k, v in notes.items() if v}, "wishes": wishes or "",
                      "replaced": fixed, "at": datetime.datetime.now().isoformat(timespec="seconds")}
     if fixed:

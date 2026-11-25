@@ -1,0 +1,16 @@
+configuration:
+  api_key:
+    name: Klucz API Anthropic (Claude)
+    description: Z console.anthropic.com. Puste = bez modeli Claude.
+  google_api_key:
+    name: Klucz API Google (Gemini)
+    description: Z aistudio.google.com. Puste = bez modeli Gemini.
+  xai_api_key:
+    name: Klucz API xAI (Grok)
+    description: Z console.x.ai. Puste = bez modeli Grok.
+  model:
+    name: Domyślny model (dokładniejszy)
+    description: Używany, dopóki nie przypiszesz modeli do funkcji w aplikacji (Ustawienia → AI).
+  import_model:
+    name: Domyślny model (tańszy)
+    description: Domyślnie dla importu książek, instrukcji przepisów i błonnika.

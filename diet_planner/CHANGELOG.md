@@ -1,5 +1,10 @@
 # Zmiany
 
+## 1.10.0
+- Modele AI od trzech dostawców: Anthropic (Claude), Google (Gemini) i xAI (Grok).
+- Wybór modelu i modelu zapasowego osobno dla każdej funkcji (Ustawienia → AI), przycisk „Test”.
+- Zużycie AI z podziałem na dostawców.
+
 ## 1.9.0
 - Instalacja i aktualizacje z repozytorium dodatków (bez kopiowania plików na serwer).
 - Dane startowe to tylko szablony: profile „Osoba 1/2”, domyślne posiłki i podstawowe przepisy.

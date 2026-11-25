@@ -36,8 +36,8 @@ def _update(**kw):
 
 
 def _model(choice):
-    c = ai.config()
-    return c["model"] if choice == "main" else c["import_model"]
+    """„Tańszy” = model zadania „Instrukcje, porcjowanie i meal prep”; „dokładniejszy” = model agenta diety."""
+    return ai.resolve("diet" if choice == "main" else "recipe_enrich")[0]
 
 
 def pending(skipped=()):
@@ -58,7 +58,7 @@ def status():
     return {**s, "running": running, "pending": len(p),
             "pending_recipes": sum(1 for k, _, _ in p if k == "recipe"),
             "pending_drafts": sum(1 for k, _, _ in p if k == "draft"),
-            "models": {"import": ai.config()["import_model"], "main": ai.config()["model"]}}
+            "models": {"import": ai.label(_model("import")), "main": ai.label(_model("main"))}}
 
 
 def estimate(choice="import"):
@@ -70,7 +70,8 @@ def estimate(choice="import"):
                [cl[i:i + recipe_agent.CLASSIFY_BATCH] for i in range(0, len(cl), recipe_agent.CLASSIFY_BATCH)])
     tin = sum(len(recipe_agent.rewrite_prompt([r for _, _, r in b])) / 3.2 + 1500 for b in batches)
     tout = len(rw) * (TOKENS_OUT_PER_RECIPE + 350) + len(cl) * 380
-    p_in, p_out = ai.price(model)
+    pr = ai.price(model) or (0, 0)
+    p_in, p_out = pr
     est = {"recipes": len(items), "batches": len(batches), "model": model, "choice": choice,
            "tokens_in": round(tin), "tokens_out": round(tout),
            "usd": round(tin / 1e6 * p_in + tout / 1e6 * p_out, 3)}
@@ -82,8 +83,9 @@ def start(choice="import"):
     with _lock:
         if _job["thread"] and _job["thread"].is_alive():
             raise ValueError("Rozpisywanie instrukcji już trwa.")
-        if not ai.ai_status()["available"]:
-            raise ValueError(ai.ai_status()["reason"])
+        st = ai.ai_status("recipe_enrich")
+        if not st["available"]:
+            raise ValueError(st["reason"])
         if not pending():
             raise ValueError("Wszystkie przepisy mają już rozpisane instrukcje.")
         src = storage.path("library", "recipes.json")

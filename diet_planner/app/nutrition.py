@@ -289,7 +289,7 @@ def fill_fiber(model=None):
                   "type": "object", "additionalProperties": False, "required": ["name", "fiber_100g"],
                   "properties": {"name": {"type": "string"}, "fiber_100g": {"type": "number"}}}}}}
     out = ai.ask_json([{"type": "text", "text": "Produkty:\n" + "\n".join(f"- {n}" for n in missing)}], schema,
-                      purpose="błonnik produktów", model=model or ai.config()["import_model"], effort="low",
+                      purpose="błonnik produktów", task="nutrition", model=model, effort="low",
                       max_tokens=8000, system=FIBER_SYSTEM)
     vals = {}
     for item in out.get("products", []):

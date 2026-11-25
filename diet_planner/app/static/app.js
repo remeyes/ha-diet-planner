@@ -669,7 +669,7 @@ function viewBooks() {
       return `<div class="card book"><h2>${esc(b.title)} <small>${esc(STATUS[b.status] || b.status)}</small></h2>
         <p class="sub">${esc(b.file)} · ${mb(b.size)}${b.chunks_total ? ` · fragmenty ${b.chunks_done}/${b.chunks_total}` : ""}${b.drafts ? ` · ${b.drafts} przepisów do przejrzenia` : ""}</p>
         ${b.chunks_total ? `<div class="bar"><i style="width:${pct}%"></i></div>` : ""}
-        ${e ? `<p class="sub">Szacowany koszt importu: <b>${e.usd < 0.01 ? "poniżej 0,01" : "~" + e.usd.toFixed(2).replace(".", ",")} $</b> (${e.chunks} fragm., ~${fmt(e.tokens_in / 1000)} tys. tokenów, model ${esc(e.model)})</p>` : ""}
+        ${e ? `<p class="sub">Szacowany koszt importu: <b>${usdTxt(e.usd)}</b> (${e.chunks} fragm., ~${fmt(e.tokens_in / 1000)} tys. tokenów, model ${esc(e.model)})</p>` : ""}
         ${b.errors.length ? `<details class="info"><summary>Błędy (${b.errors.length})</summary><ul>${b.errors.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
         <div class="row">${b.running ? `<button class="btn small" data-act="bcancel">⏸ Wstrzymaj</button>`
           : `${!e ? `<button class="btn small" data-act="bestimate" data-f="${esc(b.file)}">Oszacuj koszt</button>` : ""}
@@ -714,7 +714,7 @@ function planSheet(again) {
     <div class="card" style="margin-top:12px"><b>🧠 Agent diety (AI)</b><p class="sub">Dobiera dania pod Wasze preferencje, sezon, oceny 👍/👎, historię i życzenia, chętnie z Twoich książek. Porcje i kalorie dalej liczy aplikacja, a alergie są pilnowane przez kod.</p>
       ${a.available ? "" : `<div class="alert">${esc(a.reason || "AI niedostępne")}</div>`}
       <textarea id="g-wishes" rows="3" placeholder="Życzenia na ten tydzień, np. więcej ryb, w piątek pizza, coś z dyni"></textarea>
-      <div class="row" style="margin-top:10px"><span class="sub">Model: ${esc(a.model || "—")} · trwa ok. 30–90 s</span><span class="spacer"></span>
+      <div class="row" style="margin-top:10px"><span class="sub">Model: ${esc(a.tasks?.diet?.label || a.model || "—")}${a.tasks?.diet?.fallback_label ? ` (zapasowy: ${esc(a.tasks.diet.fallback_label)})` : ""} · trwa ok. 30–90 s</span><span class="spacer"></span>
       <button class="btn primary" data-act="dogenerate" data-mode="agent" ${a.available ? "" : "disabled"}>Ułóż z agentem</button></div></div>`);
 }
 /* ---------- Instrukcje przepisu ---------- */
@@ -989,15 +989,37 @@ function viewSettings() {
     <div class="card"><h2>O aplikacji</h2><p class="sub">Dane zapisują się w plikach Markdown (profile, ustawienia, plany) i JSON (przepisy, produkty, listy zakupów).
       Na Home Assistant znajdziesz je w udziale <code>addon_configs</code>. Plan jest orientacyjny i nie zastępuje porady dietetyka.</p></div>`;
 }
+const usdTxt = v => v == null ? "nieznany (model spoza cennika)" : v < 0.01 ? "poniżej 0,01 $" : "~" + v.toFixed(2).replace(".", ",") + " $";
 function aiCard() {
   const a = S.data.ai || {}, u = a.usage || { total: {}, by_purpose: {} };
   const usd = x => (x || 0).toFixed(2).replace(".", ",") + " $";
-  return `<div class="card"><h2>Agenci AI <small>${a.available ? "aktywne" : "wyłączone"}</small></h2>
-    ${a.available ? `<p class="sub">Agent diety i agent przepisów: <b>${esc(a.model)}</b> · import książek: <b>${esc(a.import_model)}</b>. Modele i klucz zmienisz w konfiguracji dodatku HA (lokalnie: plik .env).</p>`
-      : `<div class="alert">${esc(a.reason || "")}</div>`}
-    <p class="sub">Zużycie łącznie: ${usd(u.total.usd)} (${fmt((u.total.input || 0) / 1000)} tys. tokenów wejścia, ${fmt((u.total.output || 0) / 1000)} tys. wyjścia)${u.last ? ` · ostatnio ${esc(u.last.replace("T", " "))}` : ""}</p>
+  const prov = a.providers || {}, tasks = a.tasks || {}, cat = a.catalog || [];
+  S.aiEdit ||= Object.fromEntries(Object.entries(tasks).map(([t, v]) => [t, { model: v.model, fallback: v.fallback }]));
+  const readyP = p => prov[p]?.ready;
+  const opt = (id, sel) => `<option value="${esc(id)}" ${id === sel ? "selected" : ""}>${esc(id)}</option>`;
+  const price = id => { const m = cat.find(x => x.id === id); return m ? `${String(m.price_in).replace(".", ",")} / ${String(m.price_out).replace(".", ",")} $` : "cena nieznana"; };
+  const dirty = Object.entries(S.aiEdit).some(([t, v]) => v.model !== tasks[t]?.model || v.fallback !== tasks[t]?.fallback);
+  const res = S.aiTest || {};
+  return `<div class="card"><h2>Modele AI <small>${a.available ? "aktywne" : "wyłączone"}</small></h2>
+    <div class="provs">${Object.entries(prov).map(([p, v]) => `<span class="chip ${v.ready ? "pc p0" : ""}" title="${esc(v.reason || "gotowy")}">${v.ready ? "✓" : "✕"} ${esc(v.label)}</span>`).join("")}</div>
+    <p class="sub">Klucze API wpisujesz w <b>Konfiguracji dodatku</b> w HA (<code>anthropic_api_key</code>, <code>google_api_key</code>, <code>xai_api_key</code>), lokalnie w pliku <code>.env</code>. Nie są wysyłane do przeglądarki.</p>
+    <datalist id="ai-models">${cat.map(m => `<option value="${esc(m.id)}">${esc(m.label)} · ${price(m.id)} za 1M tokenów${m.vision ? "" : " · bez zdjęć"}${readyP(m.id.split(":")[0]) ? "" : " · brak klucza"}</option>`).join("")}</datalist>
+    <div class="aitasks">${Object.entries(S.aiEdit).map(([t, v]) => { const st = tasks[t] || {}, r = res[t];
+      const warn = !readyP((v.model || "").split(":")[0]) ? (v.fallback && readyP(v.fallback.split(":")[0]) ? "główny bez klucza – zadziała zapasowy" : "brak klucza dla tego dostawcy") : "";
+      return `<div class="aitask"><div class="aitask-name"><b>${esc((a.task_names || {})[t] || t)}</b>${(a.task_vision || []).includes(t) ? ' <small class="sub">· zdjęcia</small>' : ""}
+          ${warn ? `<small class="warn-text">${esc(warn)}</small>` : ""}</div>
+        <label><small class="sub">Model</small><input list="ai-models" data-ait="${t}" data-k="model" value="${esc(v.model)}" placeholder="dostawca:model" autocomplete="off"></label>
+        <label><small class="sub">Zapasowy</small><input list="ai-models" data-ait="${t}" data-k="fallback" value="${esc(v.fallback)}" placeholder="— brak —" autocomplete="off"></label>
+        <div class="aitask-act"><button class="btn small ghost" data-act="aitest" data-m="${esc(v.model)}" data-t="${t}" ${readyP((v.model || "").split(":")[0]) ? "" : "disabled"}>Test</button>
+          ${r ? `<small class="${r.ok ? "ok-text" : "warn-text"}">${esc(r.msg)}</small>` : ""}</div></div>`; }).join("")}</div>
+    <div class="row" style="margin-top:12px"><small class="sub">Format: <code>dostawca:model</code>, np. <code>google:gemini-3.8-flash</code>. Możesz wpisać też model spoza listy.</small><span class="spacer"></span>
+      ${dirty ? `<button class="btn small ghost" data-act="aireset">Cofnij</button>` : ""}
+      <button class="btn small primary" data-act="aisave" ${dirty ? "" : "disabled"}>Zapisz modele</button></div></div>
+  <div class="card"><h2>Zużycie AI</h2>
+    <p class="sub">Łącznie: ${usd(u.total.usd)}${u.total.unpriced ? " + modele bez cennika" : ""} (${fmt((u.total.input || 0) / 1000)} tys. tokenów wejścia, ${fmt((u.total.output || 0) / 1000)} tys. wyjścia)${u.last ? ` · ostatnio ${esc(u.last.replace("T", " "))}` : ""}</p>
+    ${u.by_provider ? `<p class="sub">${Object.entries(u.by_provider).map(([k, v]) => `${esc((prov[k] || {}).label || k)}: ${usd(v.usd)}`).join(" · ")}</p>` : ""}
     ${Object.keys(u.by_purpose).length ? `<ul class="sub">${Object.entries(u.by_purpose).map(([k, v]) => `<li>${esc(k)}: ${usd(v.usd)}</li>`).join("")}</ul>` : ""}
-    <p class="sub">Szacunek wg cennika API; faktyczne rozliczenie znajdziesz w konsoli Anthropic.</p>
+    <p class="sub">Szacunek wg cenników dostawców; faktyczne rozliczenie znajdziesz w ich konsolach.</p>
     ${(() => { const nf = S.data.products.filter(p => p.fiber == null).length;
       return nf ? `<p class="sub">Błonnik: brak danych dla ${nf} produktów. <button class="btn small" data-act="fillfiber" ${a.available ? "" : "disabled"}>Uzupełnij błonnik (AI)</button></p>` : ""; })()}</div>`;
 }
@@ -1015,7 +1037,7 @@ function instrCard() {
     ${s.errors?.length ? `<details class="info"><summary>Uwagi (${s.errors.length})</summary><ul>${s.errors.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
     ${s.pending && !s.running ? `<div class="filters" style="margin:8px 0">${[["import", "Tańszy"], ["main", "Dokładniejszy"]].map(([k, v]) =>
         `<button class="${S.instrModel === k ? "active" : ""}" data-act="imodel" data-m="${k}">${v} · ${esc(s.models[k])}</button>`).join("")}</div>
-      ${e ? `<p class="sub">Szacowany koszt: <b>${e.usd < 0.01 ? "poniżej 0,01" : "~" + e.usd.toFixed(2).replace(".", ",")} $</b> (${e.recipes} przepisów, ${e.batches} zapytań)</p>` : ""}` : ""}
+      ${e ? `<p class="sub">Szacowany koszt: <b>${usdTxt(e.usd)}</b> (${e.recipes} przepisów, ${e.batches} zapytań)</p>` : ""}` : ""}
     <div class="row">${s.running ? `<button class="btn small" data-act="icancel">⏸ Wstrzymaj</button>`
       : s.pending ? `${e ? "" : `<button class="btn small" data-act="iestimate">Oszacuj koszt</button>`}
         <button class="btn small primary" data-act="istart" ${S.data.ai?.available ? "" : "disabled"}>${s.status === "paused" ? "▶ Wznów" : "✨ Rozpisz instrukcje"}</button>` : ""}</div></div>`;
@@ -1119,7 +1141,7 @@ document.addEventListener("click", e => {
     bestimate: () => guard(async () => { const out = await api("api/books/estimate", { file: t.dataset.f }); S.books = out.books; render(); }),
     bimport: () => {
       const b = S.books.find(x => x.file === t.dataset.f), e = b.estimate;
-      const cost = e ? `Szacowany koszt: ${e.usd < 0.01 ? "poniżej 0,01" : "~" + e.usd.toFixed(2).replace(".", ",")} $ (model ${e.model}).` : "";
+      const cost = e ? `Szacowany koszt: ${usdTxt(e.usd)} (model ${e.model}).` : "";
       if (!confirm(`Zaimportować przepisy z „${b.title}”? ${cost} Tekst książki zostanie wysłany do Claude API we fragmentach.`)) return;
       guard(async () => { S.books = (await api("api/books/import", { file: t.dataset.f })).books; render(); toast("Import ruszył – możesz przeglądać aplikację"); });
     },
@@ -1170,6 +1192,17 @@ document.addEventListener("click", e => {
       const out = await api("api/recipes", draft); S.data.recipes = out.recipes; closeModal(); render(); toast("Zapisano przepis");
     }),
     close: () => closeModal(),
+    aisave: () => guard(async () => {
+      S.data.ai = await api("api/ai/models", { tasks: S.aiEdit }); S.aiEdit = null; S.aiTest = {}; render(); toast("Zapisano modele AI");
+    }),
+    aireset: () => { S.aiEdit = null; render(); },
+    aitest: () => guard(async () => {
+      const t0 = t.dataset.t; t.disabled = true; t.textContent = "…";
+      try { const r = await api("api/ai/test", { model: t.dataset.m });
+        (S.aiTest ||= {})[t0] = { ok: r.ok, msg: r.ok ? `działa · ${String(r.seconds).replace(".", ",")} s` : "odpowiedź niezgodna ze schematem" };
+      } catch (e) { (S.aiTest ||= {})[t0] = { ok: false, msg: e.message }; }
+      render();
+    }),
     planmenu: () => planMenu(),
     refreshplan: () => guard(async () => {
       setPlan(await api(`api/plans/${S.week}/refresh`, {})); closeModal(); render(); toast("Plan przeliczony – dania bez zmian");
@@ -1193,7 +1226,7 @@ document.addEventListener("click", e => {
     iestimate: () => guard(async () => { S.instr = await api("api/instructions/estimate", { model: S.instrModel }); render(); }),
     istart: () => {
       const e = S.instr?.estimate;
-      if (!confirm(`Rozpisać instrukcje dla ${S.instr.pending} przepisów modelem ${S.instr.models[S.instrModel]}?${e ? ` Szacowany koszt: ${e.usd < 0.01 ? "poniżej 0,01" : "~" + e.usd.toFixed(2).replace(".", ",")} $.` : ""}`)) return;
+      if (!confirm(`Rozpisać instrukcje dla ${S.instr.pending} przepisów modelem ${S.instr.models[S.instrModel]}?${e ? ` Szacowany koszt: ${usdTxt(e.usd)}.` : ""}`)) return;
       guard(async () => { S.instr = await api("api/instructions/start", { model: S.instrModel }); render(); toast("Rozpisywanie ruszyło – działa w tle"); });
     },
     icancel: () => guard(async () => { S.instr = await api("api/instructions/cancel", {}); render(); toast("Wstrzymam po bieżącej paczce"); }),
@@ -1248,6 +1281,7 @@ document.addEventListener("input", e => {
   const t = e.target;
   if (t.dataset.input === "rsearch") { S.rsearch = t.value; const pos = t.selectionStart; render(); const s = $("[data-input=rsearch]"); s.focus(); s.setSelectionRange(pos, pos); return; }
   if (t.dataset.q === "text" && Q) { Q.text = t.value; return; }
+  if (t.dataset.ait && S.aiEdit) { S.aiEdit[t.dataset.ait][t.dataset.k] = t.value.trim(); const b = $("[data-act=aisave]"); if (b) b.disabled = false; return; }
   if (t.dataset.d && draft) { draft[t.dataset.d] = t.type === "checkbox" ? t.checked : t.value; return; }
   if (t.dataset.sv && draft) { draft.serving[t.dataset.sv] = t.dataset.sv === "units_per_portion" ? num(t.value) || "" : t.value; return; }
   if (t.dataset.ing !== undefined && draft) { draft.ingredients[+t.dataset.ing][t.dataset.f] = t.value; return; }
