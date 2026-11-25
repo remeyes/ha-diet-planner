@@ -1,0 +1,25 @@
+name: Diet Planner
+version: "1.9.0"
+slug: diet_planner
+url: https://github.com/remeyes/ha-diet-planner
+description: Jadłospis na tydzień, lista zakupów i profile żywieniowe dla domowników
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:food-apple
+panel_title: Dieta
+map:
+  - addon_config:rw
+options:
+  api_key: ""
+  model: claude-opus-5-5
+  import_model: claude-haiku-5-5
+schema:
+  api_key: password?
+  model: str
+  import_model: str

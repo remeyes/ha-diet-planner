@@ -1,0 +1,997 @@
+[
+ {
+  "id": "owsianka",
+  "name": "Owsianka z bananem, borówkami i pestkami dyni",
+  "slots": [
+   "sniadanie"
+  ],
+  "time": 10,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "płatki owsiane",
+    "grams": 60
+   },
+   {
+    "product": "mleko 2%",
+    "grams": 250
+   },
+   {
+    "product": "banan",
+    "grams": 100
+   },
+   {
+    "product": "borówki mrożone",
+    "grams": 50
+   },
+   {
+    "product": "pestki dyni",
+    "grams": 10
+   }
+  ],
+  "steps": "Płatki zagotuj w mleku (3–4 min). Dodaj pokrojonego banana, borówki (mogą być prosto z zamrażarki) i pestki."
+ },
+ {
+  "id": "jajecznica",
+  "name": "Jajecznica z pomidorem i szczypiorkiem, chleb żytni",
+  "slots": [
+   "sniadanie"
+  ],
+  "time": 10,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "jajka",
+    "grams": 165
+   },
+   {
+    "product": "olej rzepakowy",
+    "grams": 5
+   },
+   {
+    "product": "chleb żytni razowy",
+    "grams": 80
+   },
+   {
+    "product": "pomidor",
+    "grams": 100
+   },
+   {
+    "product": "ogórek",
+    "grams": 80
+   }
+  ],
+  "steps": "Jajka zetnij na łyżeczce oleju na małym ogniu. Podawaj z chlebem, pomidorem i ogórkiem."
+ },
+ {
+  "id": "kanapki_tw",
+  "name": "Kanapki z twarożkiem, szynką z indyka i warzywami",
+  "slots": [
+   "sniadanie"
+  ],
+  "time": 5,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "chleb żytni razowy",
+    "grams": 100
+   },
+   {
+    "product": "twarożek półtłusty",
+    "grams": 80
+   },
+   {
+    "product": "szynka z indyka",
+    "grams": 40
+   },
+   {
+    "product": "papryka czerwona",
+    "grams": 60
+   },
+   {
+    "product": "ogórek",
+    "grams": 60
+   }
+  ],
+  "steps": "Chleb posmaruj twarożkiem (dopraw pieprzem, szczypiorkiem), połóż szynkę, dodaj warzywa."
+ },
+ {
+  "id": "placuszki",
+  "name": "Placuszki owsiano-bananowe z jogurtem i borówkami",
+  "slots": [
+   "sniadanie"
+  ],
+  "time": 25,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "płatki owsiane",
+    "grams": 60
+   },
+   {
+    "product": "banan",
+    "grams": 100
+   },
+   {
+    "product": "jajka",
+    "grams": 110
+   },
+   {
+    "product": "olej rzepakowy",
+    "grams": 5
+   },
+   {
+    "product": "jogurt naturalny 2%",
+    "grams": 100
+   },
+   {
+    "product": "borówki mrożone",
+    "grams": 60
+   }
+  ],
+  "steps": "Zmiksuj płatki, banana i jajka. Smaż małe placuszki na lekko natłuszczonej patelni po 2 min z każdej strony. Podawaj z jogurtem i borówkami."
+ },
+ {
+  "id": "skyr",
+  "name": "Skyr z borówkami i płatkami",
+  "slots": [
+   "przekaska"
+  ],
+  "time": 3,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "skyr naturalny",
+    "grams": 150
+   },
+   {
+    "product": "borówki mrożone",
+    "grams": 60
+   },
+   {
+    "product": "płatki owsiane",
+    "grams": 20
+   },
+   {
+    "product": "miód",
+    "grams": 5
+   }
+  ],
+  "steps": "Wymieszaj w pojemniku (borówki rozmrożą się do 10:30)."
+ },
+ {
+  "id": "kanapka_ser",
+  "name": "Kanapka z serem żółtym i warzywami + mandarynka",
+  "slots": [
+   "przekaska"
+  ],
+  "time": 3,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "chleb żytni razowy",
+    "grams": 60
+   },
+   {
+    "product": "ser żółty (gouda)",
+    "grams": 20
+   },
+   {
+    "product": "ogórek",
+    "grams": 60
+   },
+   {
+    "product": "mandarynki",
+    "grams": 80
+   }
+  ],
+  "steps": "Kanapka z serem i ogórkiem, mandarynka na deser."
+ },
+ {
+  "id": "kefir_banan",
+  "name": "Kefir + banan",
+  "slots": [
+   "przekaska"
+  ],
+  "time": 1,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "kefir 2%",
+    "grams": 250
+   },
+   {
+    "product": "banan",
+    "grams": 100
+   }
+  ],
+  "steps": "Bez przygotowania."
+ },
+ {
+  "id": "serek_jablko",
+  "name": "Serek wiejski + jabłko",
+  "slots": [
+   "przekaska"
+  ],
+  "time": 1,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "serek wiejski",
+    "grams": 150
+   },
+   {
+    "product": "jabłko",
+    "grams": 150
+   }
+  ],
+  "steps": "Bez przygotowania."
+ },
+ {
+  "id": "wafle",
+  "name": "Wafle ryżowe z twarożkiem i pomidorem + gruszka",
+  "slots": [
+   "przekaska"
+  ],
+  "time": 5,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "wafle ryżowe",
+    "grams": 20
+   },
+   {
+    "product": "twarożek półtłusty",
+    "grams": 60
+   },
+   {
+    "product": "pomidor",
+    "grams": 60
+   },
+   {
+    "product": "gruszka",
+    "grams": 120
+   }
+  ],
+  "steps": "Posmaruj wafle twarożkiem, połóż plastry pomidora."
+ },
+ {
+  "id": "kurczak_ryz",
+  "name": "Kurczak w sosie pomidorowo-paprykowym z ryżem i brokułem",
+  "slots": [
+   "obiad"
+  ],
+  "time": 35,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "pierś z kurczaka",
+    "grams": 150
+   },
+   {
+    "product": "ryż biały",
+    "grams": 70
+   },
+   {
+    "product": "passata pomidorowa",
+    "grams": 120
+   },
+   {
+    "product": "papryka czerwona",
+    "grams": 80
+   },
+   {
+    "product": "cebula",
+    "grams": 40
+   },
+   {
+    "product": "brokuł mrożony",
+    "grams": 120
+   },
+   {
+    "product": "oliwa",
+    "grams": 8
+   }
+  ],
+  "steps": "Ryż ugotuj. Kurczaka pokrój w kostkę, obsmaż na oliwie z cebulą, dodaj paprykę, po 5 min passatę i przyprawy (papryka słodka i wędzona, czosnek, oregano). Duś 10 min. Brokuł ugotuj na parze. Rozłóż do pojemników."
+ },
+ {
+  "id": "indyk_gryczana",
+  "name": "Gulasz z indyka z pieczarkami, kasza gryczana, surówka z marchewki",
+  "slots": [
+   "obiad"
+  ],
+  "time": 40,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "pierś z indyka",
+    "grams": 150
+   },
+   {
+    "product": "pieczarki",
+    "grams": 100
+   },
+   {
+    "product": "cebula",
+    "grams": 40
+   },
+   {
+    "product": "papryka czerwona",
+    "grams": 60
+   },
+   {
+    "product": "kasza gryczana",
+    "grams": 70
+   },
+   {
+    "product": "marchew",
+    "grams": 100
+   },
+   {
+    "product": "olej rzepakowy",
+    "grams": 8
+   },
+   {
+    "product": "jabłko",
+    "grams": 40
+   }
+  ],
+  "steps": "Kaszę ugotuj. Indyka w kostce obsmaż na oleju z cebulą, dodaj pieczarki i paprykę, podlej wodą, duś 15 min, dopraw majerankiem, pieprzem, papryką. Surówka: starta marchew + starte jabłko + odrobina cytryny."
+ },
+ {
+  "id": "bolognese",
+  "name": "Makaron pełnoziarnisty po bolońsku z cukinią",
+  "slots": [
+   "obiad"
+  ],
+  "time": 35,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "wołowina mielona",
+    "grams": 110
+   },
+   {
+    "product": "makaron pełnoziarnisty",
+    "grams": 80
+   },
+   {
+    "product": "passata pomidorowa",
+    "grams": 150
+   },
+   {
+    "product": "cukinia",
+    "grams": 100
+   },
+   {
+    "product": "cebula",
+    "grams": 40
+   },
+   {
+    "product": "marchew",
+    "grams": 40
+   },
+   {
+    "product": "oliwa",
+    "grams": 5
+   }
+  ],
+  "steps": "Makaron ugotuj al dente. Cebulę i startą marchew zeszklij na oliwie, dodaj mięso, smaż do zrumienienia, dodaj cukinię i passatę, duś 15 min (oregano, bazylia, czosnek)."
+ },
+ {
+  "id": "losos",
+  "name": "Pieczony łosoś z batatami i fasolką szparagową",
+  "slots": [
+   "obiad"
+  ],
+  "time": 45,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "łosoś (filet)",
+    "grams": 130
+   },
+   {
+    "product": "bataty",
+    "grams": 200
+   },
+   {
+    "product": "fasolka szparagowa mrożona",
+    "grams": 150
+   },
+   {
+    "product": "oliwa",
+    "grams": 5
+   }
+  ],
+  "steps": "Bataty w kostce wymieszaj z oliwą i przyprawami, piecz 30 min w 200°C. Na ostatnie 15 min dołóż łososia (sól, pieprz, cytryna, koperek). Fasolkę ugotuj. Upiecz od razu dodatkowe porcje łososia na niedzielną kolację."
+ },
+ {
+  "id": "wrap_tunczyk",
+  "name": "Wrapy z tuńczykiem, fasolą, kukurydzą i warzywami",
+  "slots": [
+   "kolacja"
+  ],
+  "time": 15,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "tortilla pełnoziarnista",
+    "grams": 70
+   },
+   {
+    "product": "tuńczyk w sosie własnym",
+    "grams": 80
+   },
+   {
+    "product": "fasola czerwona (puszka, odsącz.)",
+    "grams": 60
+   },
+   {
+    "product": "kukurydza (puszka)",
+    "grams": 40
+   },
+   {
+    "product": "jogurt naturalny 2%",
+    "grams": 40
+   },
+   {
+    "product": "sałata/rukola",
+    "grams": 30
+   },
+   {
+    "product": "pomidor",
+    "grams": 80
+   }
+  ],
+  "steps": "Tuńczyka wymieszaj z fasolą, kukurydzą i jogurtem (sól, pieprz, czosnek). Nałóż na tortillę z sałatą i pomidorem, zwiń. Można podgrzać na suchej patelni."
+ },
+ {
+  "id": "omlet",
+  "name": "Omlet ze szpinakiem i fetą, chleb żytni",
+  "slots": [
+   "kolacja",
+   "sniadanie"
+  ],
+  "time": 15,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "jajka",
+    "grams": 165
+   },
+   {
+    "product": "szpinak świeży",
+    "grams": 60
+   },
+   {
+    "product": "feta",
+    "grams": 30
+   },
+   {
+    "product": "olej rzepakowy",
+    "grams": 5
+   },
+   {
+    "product": "chleb żytni razowy",
+    "grams": 70
+   },
+   {
+    "product": "pomidor",
+    "grams": 100
+   }
+  ],
+  "steps": "Roztrzep jajka, wlej na rozgrzany olej, dodaj szpinak i pokruszoną fetę, smaż pod przykryciem 4–5 min. Podawaj z chlebem i pomidorem."
+ },
+ {
+  "id": "bulgur_salatka",
+  "name": "Sałatka z bulgurem, ciecierzycą, fetą i warzywami",
+  "slots": [
+   "kolacja",
+   "obiad"
+  ],
+  "time": 20,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "kasza bulgur",
+    "grams": 50
+   },
+   {
+    "product": "ciecierzyca (puszka, odsącz.)",
+    "grams": 80
+   },
+   {
+    "product": "feta",
+    "grams": 40
+   },
+   {
+    "product": "ogórek",
+    "grams": 80
+   },
+   {
+    "product": "pomidor",
+    "grams": 80
+   },
+   {
+    "product": "papryka czerwona",
+    "grams": 60
+   },
+   {
+    "product": "oliwa",
+    "grams": 8
+   }
+  ],
+  "steps": "Bulgur zalej wrzątkiem (1:2), odstaw na 10 min. Wymieszaj z ciecierzycą, warzywami w kostce i fetą, polej oliwą z cytryną, dopraw miętą/pietruszką."
+ },
+ {
+  "id": "kanapki_jajko",
+  "name": "Kanapki z twarożkiem i jajkiem na twardo, warzywa",
+  "slots": [
+   "kolacja",
+   "sniadanie"
+  ],
+  "time": 15,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "chleb żytni razowy",
+    "grams": 90
+   },
+   {
+    "product": "twarożek półtłusty",
+    "grams": 70
+   },
+   {
+    "product": "jajka",
+    "grams": 55
+   },
+   {
+    "product": "pomidor",
+    "grams": 80
+   },
+   {
+    "product": "ogórek",
+    "grams": 60
+   }
+  ],
+  "steps": "Jajka ugotuj na twardo (9 min). Chleb posmaruj twarożkiem, dodaj plasterki jajka, warzywa i szczypiorek."
+ },
+ {
+  "id": "tortilla_pizza",
+  "name": "Pizza na tortilli z mozzarellą, szynką i papryką + sałata",
+  "slots": [
+   "kolacja"
+  ],
+  "time": 15,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "tortilla pełnoziarnista",
+    "grams": 70
+   },
+   {
+    "product": "passata pomidorowa",
+    "grams": 50
+   },
+   {
+    "product": "mozzarella",
+    "grams": 50
+   },
+   {
+    "product": "szynka z indyka",
+    "grams": 40
+   },
+   {
+    "product": "papryka czerwona",
+    "grams": 50
+   },
+   {
+    "product": "pieczarki",
+    "grams": 40
+   },
+   {
+    "product": "sałata/rukola",
+    "grams": 40
+   }
+  ],
+  "steps": "Tortillę posmaruj passatą z oregano, ułóż szynkę, warzywa i mozzarellę. Piecz 8–10 min w 220°C. Podawaj z sałatą."
+ },
+ {
+  "id": "dorsz",
+  "name": "Pieczony dorsz z ziemniakami i surówką z marchewki",
+  "slots": [
+   "kolacja",
+   "obiad"
+  ],
+  "time": 35,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "dorsz (filet)",
+    "grams": 150
+   },
+   {
+    "product": "ziemniaki",
+    "grams": 250
+   },
+   {
+    "product": "marchew",
+    "grams": 100
+   },
+   {
+    "product": "jabłko",
+    "grams": 40
+   },
+   {
+    "product": "oliwa",
+    "grams": 8
+   },
+   {
+    "product": "śmietana 12%",
+    "grams": 20
+   }
+  ],
+  "steps": "Ziemniaki ugotuj. Dorsza skrop oliwą i cytryną, dopraw, piecz 15–18 min w 200°C. Surówka: starta marchew i jabłko z łyżką śmietany."
+ },
+ {
+  "id": "pulpety_bulgur",
+  "name": "Pulpety z indyka w sosie pomidorowym, kasza bulgur",
+  "slots": [
+   "obiad"
+  ],
+  "time": 40,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "mięso mielone z indyka",
+    "grams": 140
+   },
+   {
+    "product": "kasza bulgur",
+    "grams": 70
+   },
+   {
+    "product": "passata pomidorowa",
+    "grams": 150
+   },
+   {
+    "product": "cebula",
+    "grams": 40
+   },
+   {
+    "product": "marchew",
+    "grams": 60
+   },
+   {
+    "product": "płatki owsiane",
+    "grams": 10
+   },
+   {
+    "product": "oliwa",
+    "grams": 6
+   },
+   {
+    "product": "brokuł mrożony",
+    "grams": 100
+   }
+  ],
+  "steps": "Mięso wymieszaj z płatkami, startą cebulą i przyprawami, uformuj kulki. Passatę zagotuj ze startą marchewką, włóż pulpety i duś pod przykryciem 20 min. Bulgur zalej wrzątkiem (1:2), brokuł ugotuj na parze."
+ },
+ {
+  "id": "chili",
+  "name": "Chili con carne z ryżem",
+  "slots": [
+   "obiad"
+  ],
+  "time": 35,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "wołowina mielona",
+    "grams": 110
+   },
+   {
+    "product": "fasola czerwona (puszka, odsącz.)",
+    "grams": 80
+   },
+   {
+    "product": "kukurydza (puszka)",
+    "grams": 40
+   },
+   {
+    "product": "passata pomidorowa",
+    "grams": 150
+   },
+   {
+    "product": "papryka czerwona",
+    "grams": 80
+   },
+   {
+    "product": "cebula",
+    "grams": 40
+   },
+   {
+    "product": "ryż biały",
+    "grams": 70
+   },
+   {
+    "product": "oliwa",
+    "grams": 5
+   }
+  ],
+  "steps": "Cebulę zeszklij na oliwie, dodaj mięso i smaż do zrumienienia. Dodaj paprykę, passatę, fasolę i kukurydzę, dopraw kminem, papryką i chili. Duś 15 min. Podawaj z ryżem."
+ },
+ {
+  "id": "kurczak_makaron_szpinak",
+  "name": "Makaron z kurczakiem i szpinakiem w sosie jogurtowym",
+  "slots": [
+   "obiad"
+  ],
+  "time": 25,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "pierś z kurczaka",
+    "grams": 130
+   },
+   {
+    "product": "makaron pełnoziarnisty",
+    "grams": 80
+   },
+   {
+    "product": "szpinak świeży",
+    "grams": 80
+   },
+   {
+    "product": "jogurt grecki",
+    "grams": 60
+   },
+   {
+    "product": "cebula",
+    "grams": 30
+   },
+   {
+    "product": "oliwa",
+    "grams": 6
+   }
+  ],
+  "steps": "Makaron ugotuj. Kurczaka w paskach obsmaż na oliwie z cebulą i czosnkiem, dodaj szpinak, a gdy zwiędnie, zdejmij z ognia i wmieszaj jogurt. Połącz z makaronem."
+ },
+ {
+  "id": "zapiekanka_ziemniaki",
+  "name": "Zapiekanka ziemniaczana z mielonym indykiem i warzywami",
+  "slots": [
+   "obiad"
+  ],
+  "time": 50,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "ziemniaki",
+    "grams": 300
+   },
+   {
+    "product": "mięso mielone z indyka",
+    "grams": 130
+   },
+   {
+    "product": "cukinia",
+    "grams": 100
+   },
+   {
+    "product": "papryka czerwona",
+    "grams": 60
+   },
+   {
+    "product": "ser żółty (gouda)",
+    "grams": 20
+   },
+   {
+    "product": "śmietana 12%",
+    "grams": 30
+   },
+   {
+    "product": "oliwa",
+    "grams": 5
+   }
+  ],
+  "steps": "Ziemniaki pokrój w plastry i podgotuj 8 min. Mięso podsmaż z warzywami. Układaj warstwami w naczyniu, polej śmietaną, posyp serem i piecz 25 min w 190°C."
+ },
+ {
+  "id": "jaglanka",
+  "name": "Jaglanka z jabłkiem i cynamonem",
+  "slots": [
+   "sniadanie"
+  ],
+  "time": 15,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "kasza jaglana",
+    "grams": 60
+   },
+   {
+    "product": "mleko 2%",
+    "grams": 250
+   },
+   {
+    "product": "jabłko",
+    "grams": 120
+   },
+   {
+    "product": "pestki dyni",
+    "grams": 10
+   },
+   {
+    "product": "miód",
+    "grams": 5
+   }
+  ],
+  "steps": "Kaszę przepłucz wrzątkiem, ugotuj w mleku (12 min). Dodaj starte jabłko, cynamon, miód i pestki."
+ },
+ {
+  "id": "tosty",
+  "name": "Tosty z serem, szynką i pomidorem",
+  "slots": [
+   "sniadanie",
+   "kolacja"
+  ],
+  "time": 10,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "chleb żytni razowy",
+    "grams": 90
+   },
+   {
+    "product": "ser żółty (gouda)",
+    "grams": 30
+   },
+   {
+    "product": "szynka z indyka",
+    "grams": 40
+   },
+   {
+    "product": "pomidor",
+    "grams": 100
+   },
+   {
+    "product": "ogórek",
+    "grams": 60
+   }
+  ],
+  "steps": "Chleb z szynką i serem zapiecz w opiekaczu lub piekarniku (5 min). Podawaj z warzywami."
+ },
+ {
+  "id": "twarozek_rzodkiewka",
+  "name": "Twarożek ze szczypiorkiem i rzodkiewką, chleb żytni",
+  "slots": [
+   "sniadanie",
+   "kolacja"
+  ],
+  "time": 5,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "chleb żytni razowy",
+    "grams": 90
+   },
+   {
+    "product": "twarożek półtłusty",
+    "grams": 120
+   },
+   {
+    "product": "jogurt naturalny 2%",
+    "grams": 30
+   },
+   {
+    "product": "rzodkiewka",
+    "grams": 80
+   },
+   {
+    "product": "ogórek",
+    "grams": 60
+   }
+  ],
+  "steps": "Twarożek rozgnieć z jogurtem, szczypiorkiem, solą i pieprzem. Podawaj z chlebem, rzodkiewką i ogórkiem."
+ },
+ {
+  "id": "salatka_kurczak",
+  "name": "Sałatka z kurczakiem, kaszą jaglaną i warzywami",
+  "slots": [
+   "kolacja",
+   "obiad"
+  ],
+  "time": 25,
+  "meal_prep": true,
+  "ingredients": [
+   {
+    "product": "pierś z kurczaka",
+    "grams": 110
+   },
+   {
+    "product": "kasza jaglana",
+    "grams": 40
+   },
+   {
+    "product": "sałata/rukola",
+    "grams": 40
+   },
+   {
+    "product": "pomidor",
+    "grams": 80
+   },
+   {
+    "product": "ogórek",
+    "grams": 60
+   },
+   {
+    "product": "kukurydza (puszka)",
+    "grams": 40
+   },
+   {
+    "product": "oliwa",
+    "grams": 8
+   }
+  ],
+  "steps": "Kaszę ugotuj i ostudź. Kurczaka dopraw i usmaż, pokrój. Wymieszaj z warzywami i kaszą, polej oliwą z cytryną i musztardą."
+ },
+ {
+  "id": "jogurt_gruszka",
+  "name": "Jogurt grecki z gruszką i pestkami",
+  "slots": [
+   "przekaska"
+  ],
+  "time": 3,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "jogurt grecki",
+    "grams": 100
+   },
+   {
+    "product": "gruszka",
+    "grams": 120
+   },
+   {
+    "product": "pestki dyni",
+    "grams": 5
+   }
+  ],
+  "steps": "Gruszkę pokrój, wymieszaj z jogurtem, posyp pestkami."
+ },
+ {
+  "id": "kanapki_losos",
+  "name": "Kanapki z pastą z łososia i twarożku, ogórek",
+  "slots": [
+   "kolacja"
+  ],
+  "time": 10,
+  "meal_prep": false,
+  "ingredients": [
+   {
+    "product": "chleb żytni razowy",
+    "grams": 90
+   },
+   {
+    "product": "łosoś (filet)",
+    "grams": 60
+   },
+   {
+    "product": "twarożek półtłusty",
+    "grams": 60
+   },
+   {
+    "product": "ogórek",
+    "grams": 100
+   },
+   {
+    "product": "sałata/rukola",
+    "grams": 20
+   }
+  ],
+  "steps": "Łososia upiecz (albo użyj resztek z obiadu) i rozgnieć z twarożkiem, koperkiem i cytryną. Posmaruj chleb, dodaj ogórek i sałatę."
+ }
+]
