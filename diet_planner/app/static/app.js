@@ -25,6 +25,7 @@ const S = {
   data: null, view: "dzis", week: null, weekSel: null, wday: null, nextPrep: null, plan: null, planWeek: null, day: null,
   open: new Set(), person: null, edits: {}, rfilter: "", rsearch: "", busy: false, lastPlanJson: "",
   stab: "osoby", mtab: {}, mperson: null,
+  rprods: [], rmode: "all", psearch: "", pdept: "", tr: null, trAt: 0, trModel: "import",
 };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -596,7 +597,7 @@ function addSheet() {
 }
 function recipeTabs() {
   const n = S.data.inbox_count || 0;
-  return `<div class="seg">${[["lib", "Biblioteka"], ["inbox", `Do przejrzenia${n ? ` <b class="cnt">${n}</b>` : ""}`], ["books", "Książki"]]
+  return `<div class="seg">${[["lib", "Biblioteka"], ["prod", "Produkty"], ["inbox", `Do przejrzenia${n ? ` <b class="cnt">${n}</b>` : ""}`], ["books", "Książki"]]
     .map(([k, v]) => `<button class="${S.rtab === k ? "active" : ""}" data-act="rtab" data-k="${k}">${v}</button>`).join("")}</div>`;
 }
 function viewRecipes() {
@@ -604,27 +605,105 @@ function viewRecipes() {
     <div class="row"><button class="btn primary" data-act="addsheet">+ Dodaj przepis</button></div></div>${recipeTabs()}`;
   if (S.rtab === "inbox") return head + viewInbox();
   if (S.rtab === "books") return head + viewBooks();
-  const q = S.rsearch.toLowerCase();
+  if (S.rtab === "prod") return head + viewProducts();
+  const q = S.rsearch.toLowerCase(), sel = S.rprods;
+  const cover = r => { const names = new Set(r.ingredients.map(i => i.product)); return sel.filter(n => names.has(n)).length; };
+  const have = r => r.ingredients.filter(i => sel.includes(i.product)).length / (r.ingredients.length || 1);
   const list = S.data.recipes.filter(r => (!S.rfilter || r.slots.includes(S.rfilter)) &&
-    (!q || r.name.toLowerCase().includes(q) || r.ingredients.some(i => i.product.includes(q)) || (r.source?.book || "").toLowerCase().includes(q)))
-    .sort((a, b) => a.name.localeCompare(b.name, "pl"));
+    (!q || r.name.toLowerCase().includes(q) || (r.original_name || "").toLowerCase().includes(q) || r.ingredients.some(i => i.product.includes(q)) || (r.source?.book || "").toLowerCase().includes(q)) &&
+    (!sel.length || (S.rmode === "all" ? cover(r) === sel.length : cover(r) > 0)))
+    .sort((a, b) => (sel.length ? have(b) - have(a) || cover(b) - cover(a) : 0) || a.name.localeCompare(b.name, "pl"));
   const old = S.data.recipes.filter(r => !Array.isArray(r.steps) || !("prep_notes" in r)).length;
   const nIn = S.data.inbox_count || 0;
   const note = (nIn ? `<div class="banner soft"><span><b>${nIn}</b> ${nIn === 1 ? "przepis czeka" : "przepisów czeka"} na przejrzenie – sprawdź i dodaj do biblioteki.</span><button class="btn small primary" data-act="rtab" data-k="inbox">Przejrzyj</button></div>` : "") +
-    (old ? `<div class="alert info">${old} przepisów ma jeszcze skrócony opis bez kroków. <a href="#/ustawienia" data-act="gostab" data-k="ai">Rozpisz instrukcje →</a></div>` : "");
+    (old ? `<div class="alert info">${old} przepisów ma jeszcze skrócony opis bez kroków. <a href="#/ustawienia" data-act="gostab" data-k="ai">Rozpisz instrukcje →</a></div>` : "") + langNote();
   return head + note + `<input class="search" type="search" placeholder="Szukaj dania, składnika albo książki…" value="${esc(S.rsearch)}" data-input="rsearch">
+    ${prodFilterHtml(list.length)}
     <div class="filters">${[["", "Wszystkie"], ...Object.entries(SLOTS)].map(([k, v]) => `<button class="${S.rfilter === k ? "active" : ""}" data-act="rfilter" data-k="${k}">${v}</button>`).join("")}</div>
     <div class="grid-r">${list.map(r => { const n = facts(r); const hits = exclusionHits(r); const rt = r.rating || {};
+      const hv = sel.length ? r.ingredients.filter(i => sel.includes(i.product)).length : 0;
       const book = bookTitle(r.source?.book), sv = servingOf(r), tags = recipeTags(r);
       const frz = (r.prep_plan?.components || []).some(c => c.freezes);
       return `<div class="card rcard ${hits.length ? "conflict" : ""}" data-act="recipe" data-id="${esc(r.id)}">${slotIcon(r)}<div class="rmain"><h3>${esc(niceName(r.name))}</h3>
         <div class="meta">${r.slots.map(s => SLOTS[s]).join(" · ")} · ${r.time} min${r.prep_plan?.components?.length ? ` · wykończenie ~${r.prep_plan.on_day.minutes} min` : ""}</div>
-        <div class="chips">${hits.length ? `<span class="chip ex">wykluczone: ${esc(hits.join(", "))}</span>` : ""}
+        <div class="chips">${hv ? `<span class="chip have" title="Składniki z listy „Mam w lodówce”">🧺 masz ${hv}/${r.ingredients.length} składników</span>` : ""}${hits.length ? `<span class="chip ex">wykluczone: ${esc(hits.join(", "))}</span>` : ""}
           ${sv.mode === "shared" ? '<span class="chip">🍲 garnek</span>' : sv.mode === "pieces" ? `<span class="chip">🥞 ${esc(sv.unit)}</span>` : ""}${frz ? '<span class="chip">🧊 mrozi się</span>' : ""}
           ${rt.up ? `<span class="chip">👍 ${rt.up}</span>` : ""}${rt.down ? `<span class="chip">👎 ${rt.down}</span>` : ""}
           ${book ? `<span class="chip book" title="${esc(book)}">📖 ${esc(book)}</span>` : ""}</div>
         ${tags.length ? `<div class="allergens">zawiera: ${tags.join(", ")}${r.nutrition?.estimated_products?.length ? ' · <span title="Część wartości odżywczych to szacunek">~ kcal szacunkowe</span>' : ""}</div>` : ""}</div>
         <div class="rkcal"><b>${fmt(n.kcal)}</b><small>kcal / porcja</small><span>B ${Math.round(n.protein)} · W ${Math.round(n.carbs)} · T ${Math.round(n.fat)}</span></div></div>`; }).join("") || '<p class="sub">Brak wyników.</p>'}</div>`;
+}
+function prodFilterHtml(n) {
+  const sel = S.rprods;
+  return `<div class="pfilter"><div class="pf-row"><input list="prods-all" placeholder="🧺 Mam w lodówce… (wybierz produkt)" data-input="rprod" aria-label="Szukaj przepisów po produktach">
+    ${sel.length > 1 ? `<div class="filters mini">${[["all", "Wszystkie"], ["any", "Dowolny"]].map(([k, v]) => `<button class="${S.rmode === k ? "active" : ""}" data-act="rmode" data-k="${k}">${v}</button>`).join("")}</div>` : ""}</div>
+    <datalist id="prods-all">${S.data.products.filter(p => !sel.includes(p.name)).map(p => `<option value="${esc(p.name)}">`).join("")}</datalist>
+    ${sel.length ? `<div class="chips">${sel.map(x => `<span class="chip pick">${esc(x)} <button class="x" data-act="rprodrm" data-name="${esc(x)}" aria-label="Usuń ${esc(x)}">✕</button></span>`).join("")}
+      <button class="btn small ghost" data-act="rprodclear">Wyczyść</button><small class="sub">${n} ${n === 1 ? "przepis" : "przepisów"}${sel.length > 1 ? (S.rmode === "all" ? " z każdym z nich" : " z którymkolwiek") : ""}</small></div>` : ""}</div>`;
+}
+function langNote() {
+  const foreign = S.data.recipes.filter(r => r.lang && r.lang !== "pl").length, unchecked = S.data.recipes.filter(r => !r.lang).length;
+  if (foreign) return `<div class="alert info">${foreign} ${foreign === 1 ? "przepis jest" : "przepisów jest"} w innym języku niż polski. <a href="#/ustawienia" data-act="gostab" data-k="ai">Przetłumacz na polski →</a></div>`;
+  return unchecked ? `<div class="alert info">${unchecked} przepisów nie ma jeszcze sprawdzonego języka. <a href="#/ustawienia" data-act="gostab" data-k="ai">Sprawdź i przetłumacz →</a></div>` : "";
+}
+function usageMap() {  // {produkt: [{r, grams}]}
+  const u = {}; for (const r of S.data.recipes) for (const i of r.ingredients) (u[i.product] ||= []).push({ r, grams: i.grams });
+  return u;
+}
+function duplicatePairs() {  // np. „tofu” i „tofu naturalne” – do ręcznego scalenia
+  let hidden = []; try { hidden = JSON.parse(localStorage.getItem("dp-dups") || "[]"); } catch { /* brak */ }
+  const words = n => n.replace(/[()]/g, " ").split(/\s+/).filter(Boolean), out = [];
+  const names = S.data.products.map(p => p.name);
+  for (const a of names) for (const b of names) {
+    if (a === b || a.length > b.length || (a.length === b.length && a > b)) continue;
+    const wa = words(a), wb = words(b);
+    if (wa.length < wb.length && wa.every(w => wb.includes(w)) && a.length >= 4 && !hidden.includes(`${a}|${b}`)) out.push([a, b]);
+  }
+  return out;
+}
+function viewProducts() {
+  const u = usageMap(), q = S.psearch.toLowerCase(), depts = [...new Set(S.data.products.map(p => p.dept || "Inne"))];
+  const order = [...DEPT_ORDER.filter(d => depts.includes(d)), ...depts.filter(d => !DEPT_ORDER.includes(d))];
+  const list = S.data.products.filter(p => (!S.pdept || (p.dept || "Inne") === S.pdept) && (!q || p.name.includes(q)))
+    .sort((a, b) => a.name.localeCompare(b.name, "pl"));
+  const unused = S.data.products.filter(p => !u[p.name]).length, dups = duplicatePairs();
+  return `${dups.length ? `<details class="card dups"><summary><b>Możliwe duplikaty (${dups.length})</b> <small class="sub">– podobne nazwy; scal, jeśli to ten sam produkt</small></summary>
+      ${dups.map(([a, b]) => `<div class="duprow"><span><b>${esc(a)}</b> <small class="sub">${(u[a] || []).length} przep.</small> · <b>${esc(b)}</b> <small class="sub">${(u[b] || []).length} przep.</small></span><span class="spacer"></span>
+        <button class="btn small" data-act="dupmerge" data-src="${esc(b)}" data-dst="${esc(a)}">„${esc(b)}” → „${esc(a)}”</button>
+        <button class="btn small" data-act="dupmerge" data-src="${esc(a)}" data-dst="${esc(b)}">„${esc(a)}” → „${esc(b)}”</button>
+        <button class="btn small ghost" data-act="dupskip" data-k="${esc(a)}|${esc(b)}" title="To różne produkty">Różne</button></div>`).join("")}</details>` : ""}
+    <input class="search" type="search" placeholder="Szukaj produktu…" value="${esc(S.psearch)}" data-input="psearch">
+    <div class="filters">${[["", "Wszystkie"], ...order.map(d => [d, d])].map(([k, v]) => `<button class="${S.pdept === k ? "active" : ""}" data-act="pdept" data-k="${esc(k)}">${esc(v)}</button>`).join("")}</div>
+    <p class="sub">${list.length} z ${S.data.products.length} produktów${unused ? ` · ${unused} nieużywanych` : ""} · wartości na 100 g</p>
+    <div class="plist">${list.map(p => { const n = (u[p.name] || []).length;
+      return `<button class="prow" data-act="product" data-name="${esc(p.name)}"><span class="pname"><span>${esc(p.name)}${p.estimated ? ' <small class="sub" title="Wartości szacunkowe">~</small>' : ""}${p.placeholder ? ' <span class="chip ex">uzupełnij wartości</span>' : ""}</span>
+        <small class="sub">${esc(p.dept || "Inne")}${(p.tags || []).length ? " · " + esc(p.tags.join(", ")) : ""}</small></span>
+        <span class="pmac"><b>${fmt(p.kcal)}</b> kcal <small>B ${g1(p.protein)} · W ${g1(p.carbs)} · T ${g1(p.fat)}</small></span>
+        <span class="chip ${n ? "" : "ex"}">${n ? `w ${n} ${n === 1 ? "przepisie" : "przepisach"}` : "nieużywany"}</span></button>`; }).join("") || '<p class="sub">Brak wyników.</p>'}</div>`;
+}
+function productSheet(name) {
+  const p = prodMap()[name]; if (!p) { closeModal(); render(); return; }
+  const used = (usageMap()[name] || []).sort((a, b) => a.r.name.localeCompare(b.r.name, "pl"));
+  openModal(`<button class="btn ghost icon x" data-act="close">✕</button><h2>${esc(p.name)}</h2>
+    <p class="sub">${esc(p.dept || "Inne")}${(p.tags || []).length ? " · zawiera: " + esc(p.tags.join(", ")) : ""}${p.estimated ? " · wartości szacunkowe" : ""}${p.unit === "ml" ? " · liczony w ml" : ""}${p.piece ? ` · 1 ${esc(p.piece_name || "szt.")} ≈ ${p.piece} g` : ""}</p>
+    ${p.placeholder ? '<div class="alert">Produkt dodany automatycznie przy przenosinach bazy – uzupełnij wartości odżywcze.</div>' : ""}
+    <div class="tscroll"><table class="ing macro"><thead><tr><th>na 100 g</th><th>kcal</th><th>B</th><th>W</th><th>T</th><th>Bł</th></tr></thead>
+      <tbody><tr><td></td><td>${fmt(p.kcal)}</td><td>${g1(p.protein)}</td><td>${g1(p.carbs)}</td><td>${g1(p.fat)}</td><td>${p.fiber == null ? "–" : g1(p.fiber)}</td></tr></tbody></table></div>
+    <div class="row" style="margin:12px 0"><button class="btn small" data-act="pedit" data-name="${esc(p.name)}">Edytuj wartości</button>
+      <button class="btn small" data-act="prename" data-name="${esc(p.name)}">Zmień nazwę</button>
+      ${used.length ? `<button class="btn small" data-act="pshow" data-name="${esc(p.name)}">Pokaż w bibliotece</button>` : ""}<span class="spacer"></span>
+      ${used.length ? "" : `<button class="btn small danger" data-act="pdelete" data-name="${esc(p.name)}">Usuń</button>`}</div>
+    <div id="prodform"></div>
+    <div class="merge"><label class="l">Scal z innym produktem <small class="sub">– przepisy przejdą na wybrany produkt, „${esc(p.name)}” zniknie z bazy</small></label>
+      <div class="row"><input list="prods-merge" id="merge-dst" placeholder="Wybierz produkt docelowy"><button class="btn small" data-act="pmerge" data-name="${esc(p.name)}">Scal</button></div>
+      <datalist id="prods-merge">${S.data.products.filter(x => x.name !== p.name).map(x => `<option value="${esc(x.name)}">`).join("")}</datalist></div>
+    <h3 style="font-size:14px;margin:16px 0 8px">${used.length ? `W ${used.length} ${used.length === 1 ? "przepisie" : "przepisach"}` : "Nie występuje w żadnym przepisie"}</h3>
+    <div class="plist">${used.map(x => `<button class="prow" data-act="recipe" data-id="${esc(x.r.id)}"><span class="pname">${esc(niceName(x.r.name))}<small class="sub">${x.r.slots.map(s2 => SLOTS[s2]).join(" · ")}</small></span>
+      <span class="pmac">${amountText(p, x.grams)}</span></button>`).join("")}</div>`);
+}
+async function productAction(path, body, msg) {
+  const out = await api(path, body); S.data.products = out.products; S.data.recipes = out.recipes;
+  toast(msg); return out;
 }
 const SLOT_ICON = { sniadanie: "🍳", przekaska: "🍎", obiad: "🍲", kolacja: "🌙" };
 function slotIcon(r) {
@@ -776,7 +855,7 @@ function macroTable(r) {
   const fibCell = (m) => m.fibMissing.length ? (m.fib ? `≥${g1(m.fib)}` : "–") : g1(m.fib);
   return `<div class="tscroll"><table class="ing macro"><thead><tr><th>Składnik</th><th>Ilość</th><th>kcal</th><th title="Białko">B</th><th title="Węglowodany">W</th><th title="Tłuszcze">T</th><th title="Błonnik">Bł</th></tr></thead><tbody>
     ${r.ingredients.map(i => { const m = macroOf({ [i.product]: i.grams }); const est = P[i.product]?.estimated || P[i.product]?.fiber_estimated;
-      return `<tr><td>${esc(i.product)}${est ? ' <small class="sub" title="Wartości szacunkowe">~</small>' : ""}</td><td>${amountText(P[i.product], i.grams)}</td><td>${fmt(m.kcal)}</td><td>${g1(m.p)}</td><td>${g1(m.c)}</td><td>${g1(m.f)}</td><td>${fibCell(m)}</td></tr>`; }).join("")}
+      return `<tr><td><button type="button" class="plink" data-act="product" data-name="${esc(i.product)}" title="Pokaż produkt i inne przepisy z nim">${esc(i.product)}</button>${est ? ' <small class="sub" title="Wartości szacunkowe">~</small>' : ""}</td><td>${amountText(P[i.product], i.grams)}</td><td>${fmt(m.kcal)}</td><td>${g1(m.p)}</td><td>${g1(m.c)}</td><td>${g1(m.f)}</td><td>${fibCell(m)}</td></tr>`; }).join("")}
     <tr class="sum"><td><b>Razem</b></td><td><b>${fmt(grams)} g</b></td><td><b>${fmt(tot.kcal)}</b></td><td><b>${g1(tot.p)}</b></td><td><b>${g1(tot.c)}</b></td><td><b>${g1(tot.f)}</b></td><td><b>${fibCell(tot)}</b></td></tr>
     <tr class="per100"><td>na 100 g</td><td></td><td>${fmt(tot.kcal / grams * 100)}</td><td>${g1(tot.p / grams * 100)}</td><td>${g1(tot.c / grams * 100)}</td><td>${g1(tot.f / grams * 100)}</td><td>${tot.fibMissing.length ? "–" : g1(tot.fib / grams * 100)}</td></tr>
     </tbody></table></div>${splitBar(tot)}
@@ -788,6 +867,7 @@ function recipeSheet(id) {
   openModal(`<button class="btn ghost icon x" data-act="close">✕</button><h2>${esc(niceName(r.name))}</h2>
     <p class="sub">${r.slots.map(s => SLOTS[s]).join(" · ")} · ok. ${r.time} min${r.meal_prep ? " · nadaje się na zapas" : ""}</p>
     ${bookTitle(r.source?.book) ? `<p class="sub">📖 ${esc(bookTitle(r.source.book))}${r.source.chapter ? " · " + esc(r.source.chapter) : ""}</p>` : ""}
+    ${r.translated_from ? `<p class="sub">🌐 Przetłumaczone na polski${r.translated_from !== "?" && r.translated_from !== "xx" ? ` z: ${esc(r.translated_from)}` : ""}${r.original_name ? ` · oryginał: „${esc(r.original_name)}”` : ""}</p>` : ""}
     <p class="sub">Gramatury bazowe – w planie są automatycznie skalowane do kalorii każdej osoby.${r.nutrition?.estimated_products?.length ? ` Szacunkowe wartości: ${esc(r.nutrition.estimated_products.join(", "))}.` : ""}</p>
     ${servingLine(r)}
     ${macroTable(r)}
@@ -834,14 +914,21 @@ function renderEditor() {
     <textarea data-d="storage" rows="2" placeholder="W szczelnym pojemniku w lodówce do 2 dni. Odgrzej na patelni z łyżką wody.">${esc(draft.storage)}</textarea>` : ""}
     <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn" data-act="close">Anuluj</button><button class="btn primary" data-act="saverecipe">Zapisz przepis</button></div>`);
 }
-function prodForm() {
-  $("#prodform").innerHTML = `<div class="prodform"><b>Nowy produkt</b> <small class="sub">wartości na 100 g</small>
-    <div class="fgrid" style="margin-top:8px"><div class="field wide"><input data-p="name" placeholder="Nazwa, np. tofu naturalne"></div>
-    <div class="field"><label class="l">kcal</label><input data-p="kcal" inputmode="decimal"></div><div class="field"><label class="l">Białko</label><input data-p="protein" inputmode="decimal"></div>
-    <div class="field"><label class="l">Węglowodany</label><input data-p="carbs" inputmode="decimal"></div><div class="field"><label class="l">Tłuszcze</label><input data-p="fat" inputmode="decimal"></div><div class="field"><label class="l">Błonnik</label><input data-p="fiber" inputmode="decimal"></div>
-    <div class="field wide"><label class="l">Dział sklepu</label><select data-p="dept">${DEPT_ORDER.map(d => `<option>${d}</option>`).join("")}</select></div>
-    <div class="field wide checks">${TAGS.map(t => `<label><input type="checkbox" data-ptag="${t}">${t}</label>`).join("")}</div></div>
-    <div class="row" style="margin-top:8px"><button class="btn small primary" data-act="saveprod">Dodaj produkt</button></div></div>`;
+function prodForm(p = null) {  // p = produkt do edycji (karta produktu) albo nowy produkt (edytor przepisu)
+  const v = k => p && p[k] != null ? esc(String(p[k]).replace(".", ",")) : "";
+  $("#prodform").innerHTML = `<div class="prodform"><b>${p ? "Edycja produktu" : "Nowy produkt"}</b> <small class="sub">wartości na 100 g</small>
+    <div class="fgrid" style="margin-top:8px"><div class="field wide"><input data-p="name" placeholder="Nazwa, np. tofu naturalne" value="${p ? esc(p.name) : ""}"></div>
+    ${p ? `<input type="hidden" data-p="old_name" value="${esc(p.name)}">` : ""}
+    <div class="field"><label class="l">kcal</label><input data-p="kcal" inputmode="decimal" value="${v("kcal")}"></div><div class="field"><label class="l">Białko</label><input data-p="protein" inputmode="decimal" value="${v("protein")}"></div>
+    <div class="field"><label class="l">Węglowodany</label><input data-p="carbs" inputmode="decimal" value="${v("carbs")}"></div><div class="field"><label class="l">Tłuszcze</label><input data-p="fat" inputmode="decimal" value="${v("fat")}"></div><div class="field"><label class="l">Błonnik</label><input data-p="fiber" inputmode="decimal" value="${v("fiber")}"></div>
+    <div class="field wide"><label class="l">Dział sklepu</label><select data-p="dept">${DEPT_ORDER.map(d => `<option ${p?.dept === d ? "selected" : ""}>${d}</option>`).join("")}</select></div>
+    <div class="field wide checks">${TAGS.map(t => `<label><input type="checkbox" data-ptag="${t}" ${p?.tags?.includes(t) ? "checked" : ""}>${t}</label>`).join("")}</div></div>
+    <div class="row" style="margin-top:8px"><button class="btn small primary" data-act="${p ? "saveprodedit" : "saveprod"}">${p ? "Zapisz produkt" : "Dodaj produkt"}</button></div></div>`;
+}
+function prodFormValues() {
+  const p = { tags: [] }; document.querySelectorAll("[data-p]").forEach(i => (p[i.dataset.p] = i.value));
+  document.querySelectorAll("[data-ptag]:checked").forEach(i => p.tags.push(i.dataset.ptag));
+  return p;
 }
 
 /* ---------- Widok: Profile ---------- */
@@ -977,7 +1064,7 @@ function viewSettings() {
   const head = `<div class="head"><div><h1>Ustawienia</h1><p class="sub">${{ osoby: "Profile domowników – z nich liczone są cele kcal", posilki: "Wspólne zasady planowania", ai: "Agenci AI, zużycie i zadania w tle", archiwum: "Zapisane plany i informacje" }[S.stab]}</p></div></div>
     <div class="stabs" role="tablist">${STABS.map(([k, v]) => `<button role="tab" aria-selected="${S.stab === k}" class="${S.stab === k ? "active" : ""}" data-act="gostab" data-k="${k}">${v}</button>`).join("")}</div>`;
   if (S.stab === "osoby") return head + viewProfile();
-  if (S.stab === "ai") return head + aiCard() + instrCard();
+  if (S.stab === "ai") return head + aiCard() + instrCard() + trCard();
   const pub = S.data.settings; editsFor("settings", pub);
   const weeks = [...S.data.weeks].reverse();
   const first = pub.sections[0]?.name;
@@ -1027,11 +1114,11 @@ function instrCard() {
   const s = S.instr;
   if (!s || (!s.running && Date.now() - S.instrAt > 10000)) loadInstr();
   if (!s) { return '<div class="card"><h2>Instrukcje, porcjowanie i meal prep</h2><div class="loading">Wczytywanie…</div></div>'; }
-  const e = s.estimate && s.estimate.model === s.models[S.instrModel] ? s.estimate : null;
+  const e = s.estimate && s.estimate.choice === S.instrModel ? s.estimate : null;
   const total = s.done + s.pending, pct = total ? Math.round(s.done / total * 100) : 0;
   return `<div class="card" id="instr"><h2>Instrukcje, porcjowanie i meal prep <small>${s.running ? "rozpisywanie…" : s.pending ? `${s.pending} do rozpisania` : "gotowe"}</small></h2>
     <p class="sub">Agent przepisów rozpisuje każdy przepis na: <b>🔥 przed gotowaniem</b> (np. rozgrzanie piekarnika), <b>kroki</b> i <b>🧊 przechowywanie</b> przy daniach na zapas, a także ustala <b>porcjowanie</b> (wspólny garnek, sztuki albo każdy osobno) i <b>etapy meal prepu</b> (co zrobić w niedzielę, co mrozić, co na świeżo).
-      Składniki, gramatury i kalorie się nie zmieniają. Przed pierwszym uruchomieniem zapisuje się kopia <code>recipes.before-instructions.json</code>.</p>
+      Składniki, gramatury i kalorie się nie zmieniają. Przed pierwszym uruchomieniem zapisuje się kopia bazy <code>diet.before-instructions.db</code>.</p>
     ${s.pending ? `<p class="sub">Do rozpisania: ${s.pending_recipes} w bibliotece, ${s.pending_drafts} w „Do przejrzenia”.</p>` : ""}
     ${s.running || (s.status === "paused" && s.done) ? `<div class="bar"><i style="width:${pct}%"></i></div><p class="sub">${s.done} gotowe z ${total}</p>` : ""}
     ${s.errors?.length ? `<details class="info"><summary>Uwagi (${s.errors.length})</summary><ul>${s.errors.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
@@ -1052,6 +1139,36 @@ async function pollInstr() {
   try { S.instr = await api("api/instructions"); if (!S.instr.running) { S.data = await api("api/state"); toast("Instrukcje rozpisane"); } render(); } catch { /* później */ }
 }
 setInterval(pollInstr, 3000);
+function trCard() {
+  const s = S.tr;
+  if (!s || (!s.running && Date.now() - S.trAt > 10000)) loadTr();
+  if (!s) return '<div class="card"><h2>Tłumaczenie przepisów na polski</h2><div class="loading">Wczytywanie…</div></div>';
+  const e = s.estimate && s.estimate.choice === S.trModel ? s.estimate : null;
+  const todo = s.pending || !s.products_checked;
+  return `<div class="card" id="trans"><h2>Tłumaczenie przepisów na polski <small>${s.running ? "tłumaczenie…" : todo ? `${s.pending} do sprawdzenia` : "wszystko po polsku"}</small></h2>
+    <p class="sub">Agent sprawdza język każdego przepisu i tłumaczy na polski nazwę, kroki, uwagi, przechowywanie i etapy meal prepu. Nazw własnych potraw (Pad thai, Bulgogi, Gazpacho…) nie zmienia.
+      Obcojęzyczne nazwy produktów dostają polską nazwę – przepisy idą za nimi. Składniki, gramatury i kalorie się nie zmieniają. Przed startem zapisuje się kopia bazy <code>diet.before-translation.db</code>.</p>
+    ${todo ? `<p class="sub">Do sprawdzenia języka: ${s.to_detect} · do przetłumaczenia: ${s.to_translate}</p>` : ""}
+    ${s.running || s.done || s.checked ? `<p class="sub">Sprawdzono: ${s.checked || 0} · przetłumaczono: ${s.done || 0}</p>` : ""}
+    ${s.renamed?.length ? `<details class="info"><summary>Zmienione nazwy produktów (${s.renamed.length})</summary><ul>${s.renamed.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+    ${s.errors?.length ? `<details class="info"><summary>Uwagi (${s.errors.length})</summary><ul>${s.errors.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+    ${todo && !s.running ? `<div class="filters" style="margin:8px 0">${[["import", "Tańszy"], ["main", "Dokładniejszy"]].map(([k, v]) =>
+        `<button class="${S.trModel === k ? "active" : ""}" data-act="trmodel" data-m="${k}">${v} · ${esc(s.models[k])}</button>`).join("")}</div>
+      ${e ? `<p class="sub">Szacowany koszt: <b>${usdTxt(e.usd)}</b> (${e.recipes} przepisów)</p>` : ""}` : ""}
+    <div class="row">${s.running ? `<button class="btn small" data-act="trcancel">⏸ Wstrzymaj</button>`
+      : todo ? `${e ? "" : `<button class="btn small" data-act="trestimate">Oszacuj koszt</button>`}
+        <button class="btn small primary" data-act="trstart" ${S.data.ai?.available ? "" : "disabled"}>${s.status === "paused" ? "▶ Wznów" : "🌐 Sprawdź i przetłumacz"}</button>` : ""}</div></div>`;
+}
+let trLoading = false;
+async function loadTr() {
+  if (trLoading) return; trLoading = true;
+  try { S.tr = await api("api/translate"); S.trAt = Date.now(); render(); } catch { /* spróbuj później */ } finally { trLoading = false; }
+}
+async function pollTr() {
+  if (document.hidden || S.view !== "ustawienia" || S.stab !== "ai" || !S.tr?.running || !$("#modal").hidden) return;
+  try { S.tr = await api("api/translate"); if (!S.tr.running) { S.data = await api("api/state"); toast("Tłumaczenie zakończone"); } render(); } catch { /* później */ }
+}
+setInterval(pollTr, 3000);
 function validateMeals() {
   const w = $("#meal-warn"); if (!w) return;
   const sum = S.edits.settings.meals.reduce((a, m) => a + (num(m.share) || 0), 0);
@@ -1173,8 +1290,7 @@ document.addEventListener("click", e => {
     rming: () => { draft.ingredients.splice(+t.dataset.k, 1); renderEditor(); },
     newprod: () => prodForm(),
     saveprod: () => guard(async () => {
-      const p = { tags: [] }; document.querySelectorAll("[data-p]").forEach(i => (p[i.dataset.p] = i.value));
-      document.querySelectorAll("[data-ptag]:checked").forEach(i => p.tags.push(i.dataset.ptag));
+      const p = prodFormValues();
       const out = await api("api/products", p); S.data.products = out.products; if (out.recipes) S.data.recipes = out.recipes;
       const empty = draft.ingredients.find(i => !i.product); if (empty) empty.product = out.product.name; else draft.ingredients.push({ product: out.product.name, grams: "" });
       renderEditor(); toast("Dodano produkt");
@@ -1229,6 +1345,43 @@ document.addEventListener("click", e => {
       if (!confirm(`Rozpisać instrukcje dla ${S.instr.pending} przepisów modelem ${S.instr.models[S.instrModel]}?${e ? ` Szacowany koszt: ${usdTxt(e.usd)}.` : ""}`)) return;
       guard(async () => { S.instr = await api("api/instructions/start", { model: S.instrModel }); render(); toast("Rozpisywanie ruszyło – działa w tle"); });
     },
+    trestimate: () => guard(async () => { S.tr = await api("api/translate/estimate", { model: S.trModel }); render(); }),
+    trstart: () => {
+      const e = S.tr?.estimate;
+      if (!confirm(`Sprawdzić język i przetłumaczyć przepisy modelem ${S.tr.models[S.trModel]}?${e ? ` Szacowany koszt: ${usdTxt(e.usd)}.` : ""}`)) return;
+      guard(async () => { S.tr = await api("api/translate/start", { model: S.trModel }); render(); toast("Tłumaczenie ruszyło – działa w tle"); });
+    },
+    trcancel: () => guard(async () => { S.tr = await api("api/translate/cancel", {}); render(); toast("Wstrzymam po bieżącej paczce"); }),
+    trmodel: () => { S.trModel = t.dataset.m; if (S.tr) S.tr.estimate = null; render(); },
+    product: () => productSheet(t.dataset.name),
+    pdept: () => { S.pdept = t.dataset.k; render(); },
+    rmode: () => { S.rmode = t.dataset.k; render(); },
+    rprodrm: () => { S.rprods = S.rprods.filter(x => x !== t.dataset.name); render(); },
+    rprodclear: () => { S.rprods = []; render(); },
+    pshow: () => { S.rprods = [t.dataset.name]; S.rsearch = ""; S.rfilter = ""; S.rtab = "lib"; closeModal(); if (S.view !== "przepisy") location.hash = "#/przepisy"; else render(); window.scrollTo({ top: 0 }); },
+    pedit: () => prodForm(prodMap()[t.dataset.name]),
+    saveprodedit: () => guard(async () => {
+      const out = await productAction("api/products", prodFormValues(), "Zapisano produkt"); productSheet(out.product.name); render();
+    }),
+    prename: () => {
+      const nn = prompt(`Nowa nazwa produktu „${t.dataset.name}” (zmieni się we wszystkich przepisach):`, t.dataset.name);
+      if (!nn || nn.trim().toLowerCase() === t.dataset.name) return;
+      guard(async () => { const out = await productAction("api/products/rename", { old: t.dataset.name, new: nn }, "Zmieniono nazwę"); productSheet(out.product); render(); });
+    },
+    pmerge: () => {
+      const dst = $("#merge-dst").value.trim(), src = t.dataset.name;
+      if (!prodMap()[dst]) { toast("Wybierz produkt z listy", true); return; }
+      if (!confirm(`Scalić „${src}” z „${dst}”? Przepisy z „${src}” przejdą na „${dst}” (z jego wartościami odżywczymi), a „${src}” zniknie z bazy.`)) return;
+      guard(async () => { await productAction("api/products/merge", { src, dst }, "Scalono produkty"); productSheet(dst); render(); });
+    },
+    dupmerge: () => {
+      const { src, dst } = t.dataset;
+      if (!confirm(`Scalić „${src}” z „${dst}”? Przepisy przejdą na „${dst}”, a „${src}” zniknie z bazy.`)) return;
+      guard(async () => { await productAction("api/products/merge", { src, dst }, `Scalono: ${src} → ${dst}`); render(); });
+    },
+    dupskip: () => { let h = []; try { h = JSON.parse(localStorage.getItem("dp-dups") || "[]"); } catch { /* brak */ }
+      h.push(t.dataset.k); try { localStorage.setItem("dp-dups", JSON.stringify(h)); } catch { /* tryb prywatny */ } render(); },
+    pdelete: () => { if (confirm(`Usunąć produkt „${t.dataset.name}” z bazy?`)) guard(async () => { await productAction("api/products/delete", { name: t.dataset.name }, "Usunięto produkt"); closeModal(); render(); }); },
     icancel: () => guard(async () => { S.instr = await api("api/instructions/cancel", {}); render(); toast("Wstrzymam po bieżącej paczce"); }),
     imodel: () => { S.instrModel = t.dataset.m; if (S.instr) S.instr.estimate = null; render(); },
     person: () => { S.person = t.dataset.id; render(); calc(true); },
@@ -1279,6 +1432,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#modal
 
 document.addEventListener("input", e => {
   const t = e.target;
+  if (t.dataset.input === "psearch") { S.psearch = t.value; const pos = t.selectionStart; render(); const s = $("[data-input=psearch]"); s.focus(); s.setSelectionRange(pos, pos); return; }
+  if (t.dataset.input === "rprod") { if (!e.inputType || e.inputType === "insertReplacementText") addProdFilter(t, false); return; }
   if (t.dataset.input === "rsearch") { S.rsearch = t.value; const pos = t.selectionStart; render(); const s = $("[data-input=rsearch]"); s.focus(); s.setSelectionRange(pos, pos); return; }
   if (t.dataset.q === "text" && Q) { Q.text = t.value; return; }
   if (t.dataset.ait && S.aiEdit) { S.aiEdit[t.dataset.ait][t.dataset.k] = t.value.trim(); const b = $("[data-act=aisave]"); if (b) b.disabled = false; return; }
@@ -1305,6 +1460,14 @@ document.addEventListener("change", e => {
   if (t.dataset.ing !== undefined && draft) renderEditor();
   if (t.matches("select[data-meal]")) { S.edits.settings.meals[+t.dataset.meal].shared = t.value; refreshSaveBar(); }
 });
+function addProdFilter(t, force) {  // wybór z listy (lub Enter) dodaje produkt do „Mam w lodówce”
+  const v = t.value.trim().toLowerCase(), P = prodMap();
+  const name = P[v] ? v : force ? S.data.products.map(p => p.name).find(n => n.includes(v)) : null;
+  if (!v || !name) return;
+  if (!S.rprods.includes(name)) S.rprods.push(name);
+  render(); $("[data-input=rprod]")?.focus();
+}
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset?.input === "rprod") { e.preventDefault(); addProdFilter(e.target, true); } });
 document.addEventListener("submit", e => {
   if (e.target.dataset.form !== "additem") return;
   e.preventDefault();

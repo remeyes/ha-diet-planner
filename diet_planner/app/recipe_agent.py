@@ -71,7 +71,10 @@ Twoje zadanie: z podanego tekstu wyciągnąć kompletne przepisy kulinarne i opi
 
 Zasady:
 - Zwracaj tylko przepisy, które naprawdę są w tekście i mają listę składników. Pomijaj wstępy, porady, spisy treści i przepisy urwane na granicy fragmentu (bez składników albo bez sposobu przygotowania).
-- Nazwa: po polsku, tak jak w tekście, bez numeracji.
+- Język: nazwę, kroki, uwagi, przechowywanie i nazwy produktów pisz ZAWSZE po polsku. Jeśli tekst jest w innym
+  języku (także tylko tytuł, np. „Sticky Chinese boczniak belly”), przetłumacz go. Nie tłumacz nazw własnych potraw
+  i nazw, które po polsku funkcjonują w oryginale (np. Pad thai, Bulgogi, Gazpacho, curry, tofu, mozzarella).
+- Nazwa: bez numeracji; jeśli tekst jest po polsku – tak jak w tekście.
 - Składniki podaj w gramach NA JEDNĄ PORCJĘ: zsumuj ilość z przepisu i podziel przez liczbę porcji. Gdy liczba porcji nie jest podana, oszacuj ją rozsądnie i wpisz w `servings`.
 - Przeliczenia: łyżka oleju/oliwy 10 g, łyżka mąki 10 g, łyżka cukru 12 g, łyżeczka 5 g, szklanka płynu 250 g, szklanka mąki 150 g, jajko 55 g, ząbek czosnku 5 g, średnia cebula 100 g, średni ziemniak 150 g. Produkty suche i mięso podawaj w wadze surowej/suchej.
 - Pomijaj sól, pieprz, przyprawy suszone, wodę i składniki poniżej 3 g na porcję.
@@ -275,9 +278,11 @@ def _num(v, lo, hi):
 def build_draft(raw, source=None, prods=None):
     """Zamienia odpowiedź modelu na szkic przepisu z ostrzeżeniami. Nie zapisuje niczego."""
     prods = prods if prods is not None else nutrition.products_map()
+    alias = storage.aliases()  # stare nazwy scalonych / przemianowanych produktów
     warnings, new_products, ingr = [], {}, {}
     for i in raw.get("ingredients", []):
         name = (i.get("product") or "").strip().lower()[:60]
+        name = alias.get(name, name)
         grams = _num(i.get("grams_per_serving"), 0, 100000)
         if not name or grams is None:
             warnings.append(f"Pominięto składnik bez nazwy lub ilości: „{i.get('text', '')}”.")
@@ -308,6 +313,7 @@ def build_draft(raw, source=None, prods=None):
         "time": int(max(5, min(300, raw.get("time") or 30))),
         "meal_prep": bool(raw.get("meal_prep")),
         "ingredients": [{"product": k, "grams": round(g)} for k, g in ingr.items()],
+        "lang": "pl",  # agent przepisów zawsze zwraca polski tekst (SYSTEM)
     }
     recipe.update(nutrition.instructions({**raw, "meal_prep": recipe["meal_prep"]}))
     pp = nutrition.clean_prep_plan(raw.get("prep_plan"), recipe)
@@ -431,13 +437,13 @@ def accept(draft_id, edited=None):
         if not had_prep and not rec["prep_notes"]:
             del rec["prep_notes"]  # stary szkic – zostaje do rozpisania przez AI
         products = storage.products()
-        names = {p["name"] for p in products}
+        names = storage.known_names()
         used = {i["product"] for i in rec["ingredients"]}
         for p in d.get("new_products", []):
-            if p["name"] not in names and p["name"] in used:
+            if p["name"].lower() not in names and p["name"] in used:
                 products.append(p)
-                names.add(p["name"])
-        missing = sorted(used - names)
+                names.add(p["name"].lower())
+        missing = sorted(u for u in used if u.lower() not in names)
         if missing:
             raise ValueError("Nieznane produkty: " + ", ".join(missing))
         storage.save_products(products)

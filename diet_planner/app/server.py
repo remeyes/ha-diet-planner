@@ -28,6 +28,7 @@ import planner  # noqa: E402
 import quick  # noqa: E402
 import recipe_agent  # noqa: E402
 import storage  # noqa: E402
+import translate_job  # noqa: E402
 
 STATIC = APP / "static"
 INGRESS_IPS = {"172.30.32.2", "127.0.0.1", "::1"}
@@ -132,6 +133,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, ai_info())
             if p == "/api/instructions":
                 return self._send(200, instructions_job.status())
+            if p == "/api/translate":
+                return self._send(200, translate_job.status())
             if p == "/api/books":
                 return self._send(200, {"books": books.list_books(), "ai": ai.ai_status()})
             m = re.match(r"^/api/plans/(\d{4}-W\d{2})(/export\.md)?$", p)
@@ -190,6 +193,11 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/products/fiber":
                 n = nutrition.fill_fiber()
                 return self._send(200, {"filled": n, "products": storage.products(), "recipes": storage.recipes()})
+            m = re.match(r"^/api/translate/(estimate|start|cancel)$", p)
+            if m:
+                choice = "main" if body.get("model") == "main" else "import"
+                fn = {"estimate": translate_job.estimate, "start": translate_job.start}.get(m.group(1))
+                return self._send(200, fn(choice) if fn else translate_job.cancel())
             m = re.match(r"^/api/instructions/(estimate|start|cancel)$", p)
             if m:
                 choice = "main" if body.get("model") == "main" else "import"
@@ -221,6 +229,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, {"recipes": items})
                 if p == "/api/products":
                     return self._send(200, self._save_product(body))
+                m = re.match(r"^/api/products/(rename|merge|delete)$", p)
+                if m:
+                    return self._send(200, self._product_action(m.group(1), body))
                 m = re.match(r"^/api/plans/(\d{4}-W\d{2})/(generate|swap|shopping|delete|quick|invent|refresh)$", p)
                 if m:
                     return self._plan_action(m.group(1), m.group(2), body)
@@ -308,8 +319,8 @@ class Handler(BaseHTTPRequestHandler):
                 for i in r.get("ingredients", []) if i.get("product") and float(i.get("grams") or 0) > 0]
         if not name or not ings:
             raise ValueError("Przepis musi mieć nazwę i co najmniej jeden składnik")
-        known = {p["name"] for p in storage.products()}
-        missing = [i["product"] for i in ings if i["product"] not in known]
+        known = storage.known_names()
+        missing = [i["product"] for i in ings if i["product"].strip().lower() not in known]
         if missing:
             raise ValueError("Nieznane produkty: " + ", ".join(missing) + " – dodaj je najpierw do bazy")
         slots = [s for s in r.get("slots", []) if s in planner.SLOT_LABEL] or ["obiad"]
@@ -330,7 +341,7 @@ class Handler(BaseHTTPRequestHandler):
             del rec["prep_notes"]  # stary przepis bez rozpisanych instrukcji – zostaje do przepisania przez AI
         if "serving" not in rec and prev.get("serving"):
             rec["serving"] = prev["serving"]
-        for k in ("source", "rating"):
+        for k in ("source", "rating", "lang", "translated_from", "original_name"):
             if prev.get(k):
                 rec[k] = prev[k]
         rec["nutrition"] = nutrition.recipe_facts(rec)
@@ -350,13 +361,31 @@ class Handler(BaseHTTPRequestHandler):
                 vals["fiber"] = float(fib)
         except ValueError:
             raise ValueError("Wartości odżywcze muszą być liczbami")
-        prod = {"name": name, **vals, "dept": p.get("dept") or "Inne",
+        old = (p.get("old_name") or "").strip()
+        if old and old != name:  # edycja z nową nazwą – przepisy idą za produktem
+            name = storage.rename_product(old, name)
+        prev = next((x for x in storage.products() if x["name"] == name), {})
+        prod = {**{k: prev[k] for k in ("unit", "piece", "piece_name") if k in prev},
+                "name": name, **vals, "dept": p.get("dept") or "Inne",
                 "tags": [t for t in p.get("tags", []) if t in ("gluten", "laktoza", "jaja", "ryby", "orzechy", "mięso")],
                 "custom": True}
-        items = [x for x in storage.products() if x["name"] != name] + [prod]
+        items = [x if x["name"] != name else prod for x in storage.products()]
+        if not prev:
+            items.append(prod)
         storage.save_products(items)
         recipes = nutrition.refresh_all()  # zmiana produktu zmienia kaloryczność przepisów
         return {"product": prod, "products": items, "recipes": recipes}
+
+    def _product_action(self, action, body):
+        if action == "rename":
+            name = storage.rename_product(body.get("old"), body.get("new"))
+        elif action == "merge":
+            name = storage.merge_products(body.get("src"), body.get("dst"))
+        else:
+            storage.delete_product(body.get("name"))
+            name = None
+        recipes = nutrition.refresh_all()  # scalenie zmienia kaloryczność przepisów
+        return {"product": name, "products": storage.products(), "recipes": recipes}
 
     def log_message(self, fmt, *args):
         sys.stderr.write("[diet-planner] " + fmt % args + "\n")

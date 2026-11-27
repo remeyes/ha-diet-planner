@@ -6,7 +6,6 @@ Przy zerwanym połączeniu (ai.TransientError) zadanie się wstrzymuje i po wzno
 zaczyna od tej samej paczki – nic nie jest pomijane.
 """
 import datetime
-import shutil
 import threading
 
 import ai
@@ -88,10 +87,7 @@ def start(choice="import"):
             raise ValueError(st["reason"])
         if not pending():
             raise ValueError("Wszystkie przepisy mają już rozpisane instrukcje.")
-        src = storage.path("library", "recipes.json")
-        bak = storage.path("library", "recipes.before-instructions.json")
-        if src.exists() and not bak.exists():
-            shutil.copy2(src, bak)  # kopia sprzed pierwszego przepisania
+        storage.backup("diet.before-instructions.db")  # kopia sprzed pierwszego przepisania
         s = _state()
         resumed = s.get("status") in ("paused", "running")
         _update(status="running", model=_model(choice), choice=choice, skipped=[],

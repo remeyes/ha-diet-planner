@@ -66,6 +66,7 @@ TASKS = {
     "quick_invent": ("Szybki zamiennik – nowe danie", "model", False),
     "quick_photo": ("Zdjęcie lodówki", "model", True),
     "nutrition": ("Błonnik i wartości produktów", "import_model", False),
+    "recipe_translate": ("Tłumaczenie przepisów na polski", "import_model", False),
 }
 
 _usage_lock = threading.Lock()

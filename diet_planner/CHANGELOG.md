@@ -1,5 +1,12 @@
 # Zmiany
 
+## 1.12.0
+- Baza produktów i przepisów w SQLite (`library/diet.db`) – składniki powiązane z produktami; dane z plików JSON przenoszą się same przy pierwszym starcie (stare pliki zostają jako `*.json.migrated`).
+- Nowa zakładka Przepisy → Produkty: wyszukiwarka, działy, karta produktu z listą przepisów, zmiana nazwy (przenosi się na przepisy), scalanie duplikatów i usuwanie nieużywanych.
+- Szukanie przepisów po produktach („Mam w lodówce…”) i klikalne składniki w karcie przepisu.
+- Tłumaczenie przepisów na polski (Ustawienia → AI) – tytuły i treść, bez nazw własnych; import zawsze po polsku.
+- Poprawka: szacowany koszt w karcie „Instrukcje” znów się wyświetla.
+
 ## 1.11.0
 - Czwarty dostawca AI: OpenAI (GPT) – klucz `openai_api_key`, modele np. `openai:gpt-6.2-sol`.
 - Wyczerpany limit wydatków u dostawcy od razu przełącza na model zapasowy.
