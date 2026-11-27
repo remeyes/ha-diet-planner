@@ -7,6 +7,9 @@
 - Tłumaczenie przepisów na polski (Ustawienia → AI) – tytuły i treść, bez nazw własnych; import zawsze po polsku.
 - Poprawka: szacowany koszt w karcie „Instrukcje” znów się wyświetla.
 
+## 1.11.1
+- Panel „Dieta” widoczny dla wszystkich użytkowników HA, nie tylko administratorów (`panel_admin: false`, jak w wersji lokalnej).
+
 ## 1.11.0
 - Czwarty dostawca AI: OpenAI (GPT) – klucz `openai_api_key`, modele np. `openai:gpt-6.2-sol`.
 - Wyczerpany limit wydatków u dostawcy od razu przełącza na model zapasowy.
