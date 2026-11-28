@@ -2,12 +2,16 @@
 
 Dwa etapy, w tle (wątek), paczkami:
 1. wykrywanie języka – tanio: nazwa, pierwszy krok i składniki; przy pierwszej paczce także nazwy
-   produktów z bazy (obcojęzyczne dostają polską nazwę przez storage.rename_product – przepisy idą za id);
+   produktów z bazy (obcojęzyczne → propozycje polskiej nazwy);
 2. tłumaczenie – nazwa, uwagi, kroki, przechowywanie, porcjowanie i etapy meal prepu.
 Nazw własnych potraw (Pad thai, Bulgogi, Gazpacho…) nie tłumaczymy.
 
-W przepisie zostaje `lang`: brak = nie sprawdzony, "pl" = po polsku, inny kod = do przetłumaczenia.
-Po tłumaczeniu: `lang` = "pl", `translated_from` i `original_name`.
+W przepisie zostaje `lang`: brak = nie sprawdzony, "pl" = po polsku, inny kod = do przetłumaczenia
+(`title_foreign` = obcy tytuł). Po tłumaczeniu: `lang` = "pl", `translated_from` i `original_name`.
+Gdy model odda obcy tytuł bez zmian, przepis dostaje `title_kept` – widać go w Ustawieniach i można go
+przetłumaczyć ponownie (np. dokładniejszym modelem) albo zostawić.
+Obcojęzyczne nazwy produktów nie są zmieniane same – trafiają do propozycji (`product_suggestions`)
+do zatwierdzenia w zakładce Produkty.
 Postęp: library/translate_job.json. Przy zerwanym połączeniu (ai.TransientError) zadanie się wstrzymuje.
 """
 import datetime
@@ -25,9 +29,11 @@ TRANSLATE_BATCH = 8
 _lock = threading.RLock()
 _job = {"thread": None, "cancel": False}
 
-PROPER_NAMES = ("Nie tłumacz nazw własnych potraw i produktów, które po polsku funkcjonują w oryginale "
-                "(np. Pad thai, Bulgogi, Gazpacho, Mango lassi, Bunbao, Donburi, Huajuan, curry, miso, tofu, "
-                "mozzarella, feta, skyr, tortilla, wrap).")
+PROPER_NAMES = ("Nie tłumacz nazw własnych potraw i słów, które po polsku funkcjonują w oryginale "
+                "(np. Pad thai, Bulgogi, Gazpacho, Mango lassi, Bunbao, Donburi, Huajuan, Banoffee, curry, miso, "
+                "tofu, mozzarella, feta, skyr, tortilla, wrap, passata, hummus, risotto, pesto, bowl, smoothie).")
+KEEP_PRODUCTS = ("tortilla", "passata", "wrap", "pita", "tofu", "tempeh", "skyr", "feta", "mozzarella", "ricotta",
+                 "mascarpone", "parmezan", "hummus", "pesto", "curry", "miso", "tahini", "granola", "musli", "noodle")
 
 DETECT_SYSTEM = f"""Jesteś redaktorem polskiej aplikacji z przepisami. Dla każdego przepisu ustal, w jakim języku jest
 nazwa i treść. Treść po polsku z pojedynczymi zapożyczeniami to nadal polski.
@@ -38,15 +44,23 @@ nazwa i treść. Treść po polsku z pojedynczymi zapożyczeniami to nadal polsk
 - `body_foreign`: true, gdy kroki lub składniki są w innym języku niż polski.
 {PROPER_NAMES}
 Zwróć wynik dla KAŻDEGO przepisu, z jego `id` bez zmian.
-Jeśli podano listę produktów: w `products` zwróć tylko te nazwy, które są w obcym języku i mają zwykłą polską
-nazwę (np. „chicken breast” → „pierś z kurczaka”); polską nazwę pisz małymi literami, krótko i ogólnie."""
+Jeśli podano listę produktów: w `products` zwróć tylko nazwy napisane w CAŁOŚCI w obcym języku, które w polskim
+sklepie mają zwykłą polską nazwę (np. „chicken breast” → „pierś z kurczaka”, „baking powder” → „proszek do pieczenia”).
+NIE zwracaj nazw polskich ani zapożyczeń używanych w Polsce (np. tortilla pełnoziarnista, passata pomidorowa,
+tofu naturalne, mozzarella, skyr, pasta miso). Polską nazwę pisz małymi literami, krótko i ogólnie.
+W razie wątpliwości – pomiń produkt."""
 
 TRANSLATE_SYSTEM = f"""Jesteś tłumaczem kulinarnym. Przetłumacz przepisy na naturalny, poprawny polski
 (tryb rozkazujący w krokach, np. „Pokrój cebulę…”). {PROPER_NAMES}
 Zasady:
 - Nie zmieniaj dania, liczb, temperatur, czasów ani kolejności kroków. Liczba elementów każdej listy ma zostać taka sama.
 - Teksty, które już są po polsku, przepisz bez zmian.
-- Nazwa: krótka, po polsku, z wielkiej litery (zachowaj nazwę własną potrawy, jeśli jest).
+- Nazwa: krótka, po polsku, z wielkiej litery. Gdy przy przepisie jest „TYTUŁ DO PRZETŁUMACZENIA”, MUSISZ zwrócić
+  polski tytuł – inny niż oryginał. Nazwę własną potrawy zostaw, ale słowa opisowe przetłumacz, np.
+  „Peanut butter chicken” → „Kurczak w sosie z masła orzechowego”, „Sticky Chinese boczniak belly” → „Kleiste
+  boczniaki po chińsku”, „Zero butter no chicken” → „Wegański butter chicken bez masła”, „Tea ceremony” →
+  „Herbaciana ceremonia”, „Mango sticky rice” → „Kleisty ryż z mango”. Tylko gdy cały tytuł to nazwa własna
+  (np. „Banoffee”, „Pad thai”), zostaw go bez zmian.
 - `components` – w tej samej kolejności co w wejściu.
 Zwróć wynik dla KAŻDEGO przepisu, z jego `id` bez zmian."""
 
@@ -87,12 +101,14 @@ def pending(skipped=()):
 
 
 def status():
+    _mark_legacy()
     s = _state()
     running = bool(_job["thread"] and _job["thread"].is_alive())
     if s.get("status") == "running" and not running:
         s["status"] = "paused"
     det, tr = pending(s.get("skipped", []) if running else ())
     return {**s, "running": running, "pending": len(det) + len(tr), "to_detect": len(det), "to_translate": len(tr),
+            "kept_titles": kept_titles(), "product_suggestions": suggestions(),
             "models": {"import": ai.label(_model("import")), "main": ai.label(_model("main"))}}
 
 
@@ -135,7 +151,7 @@ def detect(recipes, products=None, model=None):
 def _source_text(r):
     pp = r.get("prep_plan") or {}
     comps = pp.get("components") or []
-    lines = [f"id: {r['id']}", f"nazwa: {r['name']}"]
+    lines = [f"id: {r['id']}", f"nazwa: {r['name']}" + ("  ← TYTUŁ DO PRZETŁUMACZENIA" if r.get("title_foreign") else "")]
     if r.get("prep_notes"):
         lines.append("przed gotowaniem:\n" + "\n".join(f"- {x}" for x in r["prep_notes"]))
     lines.append("kroki:\n" + "\n".join(f"- {x}" for x in nutrition.steps_list(r)))
@@ -176,9 +192,12 @@ def translate(recipes, model=None):
         steps = [s.strip() for s in it.get("steps") or [] if s.strip()]
         if not name or (nutrition.steps_list(r) and not steps):
             continue
-        res = {"name": name, "steps": steps, "lang": "pl", "translated_from": r.get("lang") or "?"}
-        if name != r["name"]:
+        res = {"name": name, "steps": steps, "lang": "pl", "translated_from": r.get("lang") or "?",
+               "title_foreign": None, "title_kept": None}
+        if name.casefold() != r["name"].casefold():
             res["original_name"] = r.get("original_name") or r["name"]
+        elif r.get("title_foreign"):
+            res["title_kept"] = True  # model zostawił obcy tytuł – do ponowienia albo ręcznej zmiany
         if "prep_notes" in r:
             res["prep_notes"] = [s.strip() for s in it.get("prep_notes") or [] if s.strip()]
         if r.get("storage"):
@@ -206,6 +225,15 @@ def translate(recipes, model=None):
 
 # --- Zapis -------------------------------------------------------------------------------
 
+def _merge(r, ch):
+    """Jak dict.update, ale None usuwa klucz."""
+    for k, v in ch.items():
+        if v is None:
+            r.pop(k, None)
+        else:
+            r[k] = v
+
+
 def _apply(changes):
     """{id: pola} → biblioteka i szkice."""
     if not changes:
@@ -214,28 +242,79 @@ def _apply(changes):
         recipes = storage.recipes()
         hit = [r for r in recipes if r["id"] in changes]
         for r in hit:
-            r.update(changes[r["id"]])
+            _merge(r, changes[r["id"]])
         if hit:
             storage.save_recipes(recipes)
             nutrition.write_markdown(recipes)
         items = recipe_agent.inbox()
         dhit = [d for d in items if d["id"] in changes]
         for d in dhit:
-            d["recipe"].update(changes[d["id"]])
+            _merge(d["recipe"], changes[d["id"]])
         if dhit:
             recipe_agent.save_inbox(items)
 
 
-def _rename_products(renames):
-    done = []
+def suggestions():
+    """[{name, polish}] – propozycje polskich nazw produktów (tylko dla produktów, które nadal są w bazie)."""
+    names = {p["name"] for p in storage.products()}
+    return [x for x in _state().get("product_suggestions", []) if x["name"] in names]
+
+
+def _suggest(renames):
+    s = _state()
+    cur = {x["name"]: x for x in s.get("product_suggestions", [])}
     for old, new in renames.items():
-        try:
-            done.append(f"{old} → {storage.rename_product(old, new)}")
-        except ValueError:
-            continue
-    if done:
-        nutrition.refresh_all()
-    return done
+        if old.casefold() in KEEP_PRODUCTS or any(w in old.casefold().split() for w in KEEP_PRODUCTS):
+            continue  # zapożyczenia używane po polsku – nie proponujemy zmiany
+        if old not in set(s.get("dismissed_suggestions", [])):
+            cur[old] = {"name": old, "polish": new}
+    _update(product_suggestions=list(cur.values()))
+
+
+def accept_suggestion(name, new=None):
+    """Zmienia nazwę produktu na proponowaną (albo podaną) – przepisy idą za produktem."""
+    sug = next((x for x in suggestions() if x["name"] == name), None)
+    target = (new or (sug or {}).get("polish") or "").strip()
+    if not target:
+        raise ValueError("Brak propozycji dla tego produktu")
+    result = storage.rename_product(name, target)
+    s = _state()
+    _update(product_suggestions=[x for x in s.get("product_suggestions", []) if x["name"] != name],
+            renamed=(s.get("renamed", []) + [f"{name} → {result}"])[-200:])
+    nutrition.refresh_all()
+    return result
+
+
+def reject_suggestion(name):
+    s = _state()
+    _update(product_suggestions=[x for x in s.get("product_suggestions", []) if x["name"] != name],
+            dismissed_suggestions=list(dict.fromkeys(s.get("dismissed_suggestions", []) + [name])))
+
+
+def kept_titles():
+    return [{"id": r["id"], "name": r["name"]} for r in storage.recipes() if r.get("title_kept")]
+
+
+def _mark_legacy():
+    """Wersja 1.12.0 oznaczała przepis jako przetłumaczony, nawet gdy model zostawił obcy tytuł.
+    Takie przepisy (przetłumaczone, bez `original_name`) dostają jednorazowo `title_kept`."""
+    if _state().get("legacy_checked"):
+        return
+    changes = {r["id"]: {"title_kept": True} for r in storage.recipes()
+               if r.get("translated_from") and not r.get("original_name") and not r.get("title_kept")}
+    _apply(changes)
+    _update(legacy_checked=True)
+
+
+def retry_kept(ids=None):
+    """Ponownie kolejkuje przepisy z pozostawionym obcym tytułem."""
+    with storage.LOCK:
+        want = set(ids or [])
+        changes = {r["id"]: {"lang": r.get("translated_from") if r.get("translated_from") not in (None, "?") else "xx",
+                             "title_foreign": True, "title_kept": None}
+                   for r in storage.recipes() if r.get("title_kept") and (not want or r["id"] in want)}
+        _apply(changes)
+    return status()
 
 
 # --- Sterowanie zadaniem -----------------------------------------------------------------
@@ -277,7 +356,7 @@ def start(choice="import"):
         resumed = s.get("status") in ("paused", "running")
         _update(status="running", model=_model(choice), choice=choice, skipped=[],
                 done=s.get("done", 0) if resumed else 0, checked=s.get("checked", 0) if resumed else 0,
-                renamed=s.get("renamed", []) if resumed else [],
+                renamed=s.get("renamed", []),
                 errors=s.get("errors", []) if resumed else [],
                 started=datetime.datetime.now().isoformat(timespec="seconds"))
         _job["cancel"] = False
@@ -306,15 +385,16 @@ def step(model, skipped):
         names = None if s.get("products_checked") else [p["name"] for p in storage.products()]
         found, renames = detect([r for _, _, r in batch], names, model=model)
         if names is not None:
-            renamed = _rename_products(renames)
-            _update(products_checked=True, renamed=(s.get("renamed", []) + renamed)[-200:])
+            _suggest(renames)
+            _update(products_checked=True)
         changes = {}
         for _, rid, _r in batch:
             f = found.get(rid)
             if f:
                 foreign = f.get("title_foreign") or f.get("body_foreign")
                 lang = (f.get("lang") or "").strip().lower()[:5]
-                changes[rid] = {"lang": (lang if lang and lang != "pl" else "xx") if foreign else "pl"}
+                changes[rid] = {"lang": (lang if lang and lang != "pl" else "xx") if foreign else "pl",
+                                "title_foreign": True if f.get("title_foreign") else None}
         _apply(changes)
         _update(checked=_state().get("checked", 0) + len(changes))
         return [rid for _, rid, _ in batch if rid not in changes]

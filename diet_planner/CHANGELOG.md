@@ -1,5 +1,10 @@
 # Zmiany
 
+## 1.12.1
+- Tłumaczenie: obcy tytuł zwrócony przez model bez zmian nie jest już liczony jako przetłumaczony. W Ustawieniach → AI jest lista takich tytułów i przycisk „Przetłumacz tytuły ponownie” (tytuły z 1.12.0 oznaczają się same).
+- Mocniejsze polecenie tłumaczenia tytułów (z przykładami); nazwy własne potraw zostają.
+- Nazwy produktów nie zmieniają się już same – propozycje polskich nazw do zatwierdzenia w zakładce Produkty („Zmień”, „Inna nazwa…”, „Zostaw”). Zapożyczenia (tortilla, passata, wrap, tofu…) nie są proponowane.
+
 ## 1.12.0
 - Baza produktów i przepisów w SQLite (`library/diet.db`) – składniki powiązane z produktami; dane z plików JSON przenoszą się same przy pierwszym starcie (stare pliki zostają jako `*.json.migrated`).
 - Nowa zakładka Przepisy → Produkty: wyszukiwarka, działy, karta produktu z listą przepisów, zmiana nazwy (przenosi się na przepisy), scalanie duplikatów i usuwanie nieużywanych.

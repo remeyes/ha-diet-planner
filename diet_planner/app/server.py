@@ -69,6 +69,7 @@ def state():
         "exclusions": planner.exclusions(ppl),
         "ai": ai_info(),
         "inbox_count": len(recipe_agent.inbox()),
+        "product_suggestions": translate_job.suggestions(),
     }
 
 
@@ -193,6 +194,8 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/products/fiber":
                 n = nutrition.fill_fiber()
                 return self._send(200, {"filled": n, "products": storage.products(), "recipes": storage.recipes()})
+            if p == "/api/translate/retry":
+                return self._send(200, translate_job.retry_kept(body.get("ids")))
             m = re.match(r"^/api/translate/(estimate|start|cancel)$", p)
             if m:
                 choice = "main" if body.get("model") == "main" else "import"
@@ -229,6 +232,14 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, {"recipes": items})
                 if p == "/api/products":
                     return self._send(200, self._save_product(body))
+                m = re.match(r"^/api/products/suggestion/(accept|reject)$", p)
+                if m:
+                    if m.group(1) == "accept":
+                        translate_job.accept_suggestion(body.get("name"), body.get("new"))
+                    else:
+                        translate_job.reject_suggestion(body.get("name"))
+                    return self._send(200, {"products": storage.products(), "recipes": storage.recipes(),
+                                            "product_suggestions": translate_job.suggestions()})
                 m = re.match(r"^/api/products/(rename|merge|delete)$", p)
                 if m:
                     return self._send(200, self._product_action(m.group(1), body))

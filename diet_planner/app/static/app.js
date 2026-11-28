@@ -666,8 +666,13 @@ function viewProducts() {
   const order = [...DEPT_ORDER.filter(d => depts.includes(d)), ...depts.filter(d => !DEPT_ORDER.includes(d))];
   const list = S.data.products.filter(p => (!S.pdept || (p.dept || "Inne") === S.pdept) && (!q || p.name.includes(q)))
     .sort((a, b) => a.name.localeCompare(b.name, "pl"));
-  const unused = S.data.products.filter(p => !u[p.name]).length, dups = duplicatePairs();
-  return `${dups.length ? `<details class="card dups"><summary><b>Możliwe duplikaty (${dups.length})</b> <small class="sub">– podobne nazwy; scal, jeśli to ten sam produkt</small></summary>
+  const unused = S.data.products.filter(p => !u[p.name]).length, dups = duplicatePairs(), sug = S.data.product_suggestions || [];
+  return `${sug.length ? `<div class="card dups"><b>Propozycje polskich nazw (${sug.length})</b> <small class="sub">– agent tłumaczenia uznał te nazwy za obcojęzyczne; zmiana obejmie wszystkie przepisy</small>
+      ${sug.map(x => `<div class="duprow"><span><b>${esc(x.name)}</b> → ${esc(x.polish)} <small class="sub">${(u[x.name] || []).length} przep.</small></span><span class="spacer"></span>
+        <button class="btn small primary" data-act="sugaccept" data-name="${esc(x.name)}" data-new="${esc(x.polish)}">Zmień</button>
+        <button class="btn small" data-act="sugedit" data-name="${esc(x.name)}" data-new="${esc(x.polish)}">Inna nazwa…</button>
+        <button class="btn small ghost" data-act="sugreject" data-name="${esc(x.name)}">Zostaw</button></div>`).join("")}</div>` : ""}
+    ${dups.length ? `<details class="card dups"><summary><b>Możliwe duplikaty (${dups.length})</b> <small class="sub">– podobne nazwy; scal, jeśli to ten sam produkt</small></summary>
       ${dups.map(([a, b]) => `<div class="duprow"><span><b>${esc(a)}</b> <small class="sub">${(u[a] || []).length} przep.</small> · <b>${esc(b)}</b> <small class="sub">${(u[b] || []).length} przep.</small></span><span class="spacer"></span>
         <button class="btn small" data-act="dupmerge" data-src="${esc(b)}" data-dst="${esc(a)}">„${esc(b)}” → „${esc(a)}”</button>
         <button class="btn small" data-act="dupmerge" data-src="${esc(a)}" data-dst="${esc(b)}">„${esc(a)}” → „${esc(b)}”</button>
@@ -700,6 +705,12 @@ function productSheet(name) {
     <h3 style="font-size:14px;margin:16px 0 8px">${used.length ? `W ${used.length} ${used.length === 1 ? "przepisie" : "przepisach"}` : "Nie występuje w żadnym przepisie"}</h3>
     <div class="plist">${used.map(x => `<button class="prow" data-act="recipe" data-id="${esc(x.r.id)}"><span class="pname">${esc(niceName(x.r.name))}<small class="sub">${x.r.slots.map(s2 => SLOTS[s2]).join(" · ")}</small></span>
       <span class="pmac">${amountText(p, x.grams)}</span></button>`).join("")}</div>`);
+}
+async function sugApply(op, body) {
+  const out = await api(`api/products/suggestion/${op}`, body);
+  Object.assign(S.data, { products: out.products, recipes: out.recipes, product_suggestions: out.product_suggestions });
+  if (S.tr) S.tr.product_suggestions = out.product_suggestions;
+  render();
 }
 async function productAction(path, body, msg) {
   const out = await api(path, body); S.data.products = out.products; S.data.recipes = out.recipes;
@@ -1150,6 +1161,11 @@ function trCard() {
       Obcojęzyczne nazwy produktów dostają polską nazwę – przepisy idą za nimi. Składniki, gramatury i kalorie się nie zmieniają. Przed startem zapisuje się kopia bazy <code>diet.before-translation.db</code>.</p>
     ${todo ? `<p class="sub">Do sprawdzenia języka: ${s.to_detect} · do przetłumaczenia: ${s.to_translate}</p>` : ""}
     ${s.running || s.done || s.checked ? `<p class="sub">Sprawdzono: ${s.checked || 0} · przetłumaczono: ${s.done || 0}</p>` : ""}
+    ${s.kept_titles?.length && !s.running ? `<div class="alert info"><b>${s.kept_titles.length}</b> ${s.kept_titles.length === 1 ? "tytuł został" : "tytułów zostało"} bez tłumaczenia, choć ${s.kept_titles.length === 1 ? "jest" : "są"} w obcym języku.
+      Możesz przetłumaczyć je ponownie (najlepiej modelem „Dokładniejszy”) albo zmienić ręcznie w edycji przepisu.
+      <details><summary>Pokaż</summary><ul>${s.kept_titles.map(x => `<li>${esc(x.name)}</li>`).join("")}</ul></details>
+      <div class="row" style="margin-top:6px"><button class="btn small" data-act="trretry">🔁 Przetłumacz tytuły ponownie</button></div></div>` : ""}
+    ${s.product_suggestions?.length ? `<p class="sub">Propozycje polskich nazw produktów: ${s.product_suggestions.length} – <button class="btn small ghost" data-act="goprod">Przejrzyj w zakładce Produkty →</button></p>` : ""}
     ${s.renamed?.length ? `<details class="info"><summary>Zmienione nazwy produktów (${s.renamed.length})</summary><ul>${s.renamed.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
     ${s.errors?.length ? `<details class="info"><summary>Uwagi (${s.errors.length})</summary><ul>${s.errors.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
     ${todo && !s.running ? `<div class="filters" style="margin:8px 0">${[["import", "Tańszy"], ["main", "Dokładniejszy"]].map(([k, v]) =>
@@ -1352,6 +1368,12 @@ document.addEventListener("click", e => {
       guard(async () => { S.tr = await api("api/translate/start", { model: S.trModel }); render(); toast("Tłumaczenie ruszyło – działa w tle"); });
     },
     trcancel: () => guard(async () => { S.tr = await api("api/translate/cancel", {}); render(); toast("Wstrzymam po bieżącej paczce"); }),
+    goprod: () => { S.rtab = "prod"; location.hash = "#/przepisy"; window.scrollTo({ top: 0 }); },
+    trretry: () => guard(async () => { S.tr = await api("api/translate/retry", {}); S.data.recipes = (await api("api/state")).recipes; render(); toast("Tytuły czekają na tłumaczenie – wybierz model i kliknij „Sprawdź i przetłumacz”"); }),
+    sugaccept: () => guard(async () => { await sugApply("accept", { name: t.dataset.name, new: t.dataset.new }); toast(`Zmieniono: ${t.dataset.name} → ${t.dataset.new}`); }),
+    sugedit: () => { const nn = prompt(`Polska nazwa dla „${t.dataset.name}”:`, t.dataset.new); if (!nn?.trim()) return;
+      guard(async () => { await sugApply("accept", { name: t.dataset.name, new: nn }); toast("Zmieniono nazwę"); }); },
+    sugreject: () => guard(async () => { await sugApply("reject", { name: t.dataset.name }); toast("Nazwa zostaje bez zmian"); }),
     trmodel: () => { S.trModel = t.dataset.m; if (S.tr) S.tr.estimate = null; render(); },
     product: () => productSheet(t.dataset.name),
     pdept: () => { S.pdept = t.dataset.k; render(); },
